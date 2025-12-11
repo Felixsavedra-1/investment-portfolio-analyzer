@@ -35,6 +35,7 @@ ENV/
 
 # Project specific
 *.png
+!portfolio_analysis.png
 data/
 output/
 .DS_Store

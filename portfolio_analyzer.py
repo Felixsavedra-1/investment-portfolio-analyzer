@@ -121,7 +121,6 @@ class PortfolioAnalyzer:
         
         tickers = list(dict.fromkeys(list(self.portfolio.keys()) + [self.benchmark]))
         
-        # Download data
         data = yf.download(
             tickers,
             start=self.start_date,

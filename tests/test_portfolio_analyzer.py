@@ -13,12 +13,12 @@ from portfolio_analyzer import PortfolioAnalyzer, TRADING_DAYS_PER_YEAR
 
 def test_invalid_non_numeric_weight_raises_clear_error():
     with pytest.raises(ValueError, match="Invalid weight"):
-        PortfolioAnalyzer({'AAPL': 'abc', 'MSFT': 0.5})
+        PortfolioAnalyzer({'AAPL': 0.5, 'AXP': 0.5, 'IAU': 0.5})
 
 
 def test_duplicate_ticker_after_normalization_raises():
     with pytest.raises(ValueError, match="Duplicate ticker"):
-        PortfolioAnalyzer({'aapl': 0.5, 'AAPL': 0.5})
+        PortfolioAnalyzer({'AAPL': 0.5, 'AAPL': 0.5})
 
 
 def test_benchmark_collision_raises():

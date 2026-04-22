@@ -1,0 +1,25 @@
+# Copy this file to config_local.py and fill in your values.
+# config_local.py is gitignored — your personal data never leaves your machine.
+
+from typing import Dict, FrozenSet
+
+# Tickers shown in the morning brief and dashboard watchlist
+WATCHLIST: Dict[str, str] = {
+    'AAPL': 'Apple',
+    'NVDA': 'Nvidia',
+}
+
+# Mark mutual funds with (*) — NAV updates after 4 PM ET, not intraday
+MUTUAL_FUNDS: FrozenSet[str] = frozenset()
+
+# Benchmark ticker for alpha calculation (must not be in your holdings)
+BENCHMARK: str = 'SPY'
+
+# Annual risk-free rate for Sharpe ratio (≈ current T-bill yield)
+RISK_FREE_RATE: float = 0.045
+
+# Timezone for the brief header
+BRIEF_TIMEZONE: str = 'America/New_York'
+
+# Day of month your savings accounts credit interest (1–28). None to disable.
+INTEREST_PAYMENT_DAY: int | None = None

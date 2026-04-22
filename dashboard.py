@@ -1,0 +1,201 @@
+"""
+dashboard.py — Build and open the animated web dashboard.
+
+Usage: python dashboard.py
+"""
+
+from __future__ import annotations
+
+import json
+import webbrowser
+from datetime import date, datetime, timezone
+from pathlib import Path
+
+from config import DATA_DIR, GOALS_FILE, HOLDINGS_FILE, INTEREST_PAYMENT_DAY, MOMENTUM_FLAT_BAND, SAVINGS_FILE, WATCHLIST
+from ledger import _payment_dates, accrued_interest, projected_next_payment, load_goals, load_holdings, load_savings
+from prices import fetch_prices_batch, fetch_prices_with_change, fetch_watchlist_history
+
+OUT_FILE  = DATA_DIR / "dashboard.html"
+TEMPLATE  = Path(__file__).parent / "dashboard.html"
+
+
+def _compute_signal(history: dict, flat_band: float) -> dict:
+    """Three-horizon momentum signal mirroring morning_brief.py logic."""
+    prices_1m = history.get('1M', [])
+    prices_1w = history.get('1W', [])
+
+    def pct_ret(p):
+        if len(p) < 2 or p[0] == 0:
+            return None
+        return (p[-1] - p[0]) / p[0]
+
+    r1d = pct_ret(prices_1w[-2:]) if len(prices_1w) >= 2 else None
+    r1w = pct_ret(prices_1w)
+    r1m = pct_ret(prices_1m)
+
+    if None in (r1d, r1w, r1m):
+        return {"type": "NEUTRAL", "reason": "insufficient data"}
+    if r1m < -flat_band:
+        return {"type": "BEARISH", "reason": "bounce in downtrend" if (r1d > 0 or r1w > 0) else "downtrend"}
+    if r1m > flat_band:
+        return {"type": "BULLISH", "reason": "dip in uptrend" if (r1d < 0 or r1w < 0) else "strong momentum"}
+    return {"type": "NEUTRAL", "reason": "mixed signals"}
+
+
+def _build_holdings_data(
+    holdings: dict,
+    prices: dict,
+    prev_prices: dict,
+) -> tuple:
+    """Returns (holding_rows, portfolio_value, total_cost)."""
+    rows = []
+    portfolio_value = 0.0
+    total_cost = 0.0
+    for ticker, h in holdings.items():
+        total_cost += h.cost
+        price = prices.get(ticker)
+        if price is None:
+            # No valid price — use cost basis to avoid corrupting the portfolio total
+            portfolio_value += h.cost
+            rows.append({
+                "ticker": ticker, "label": h.label,
+                "shares": round(h.shares, 4), "cost": round(h.cost, 2),
+                "price": 0.0, "value": round(h.cost, 2),
+                "gain_pct": 0.0, "gain_dollar": 0.0,
+                "day_change_dollar": 0.0, "day_change_pct": 0.0,
+            })
+            continue
+        value          = h.shares * price
+        gain_dollar    = value - h.cost
+        gain_pct       = (gain_dollar / h.cost * 100) if h.cost > 0 else 0.0
+        prev           = prev_prices.get(ticker, price)
+        day_chg_dollar = (price - prev) * h.shares
+        day_chg_pct    = (price - prev) / prev * 100 if prev else 0.0
+        portfolio_value += value
+        rows.append({
+            "ticker":            ticker,
+            "label":             h.label,
+            "shares":            round(h.shares, 4),
+            "cost":              round(h.cost, 2),
+            "price":             round(price, 2),
+            "value":             round(value, 2),
+            "gain_pct":          round(gain_pct, 2),
+            "gain_dollar":       round(gain_dollar, 2),
+            "day_change_dollar": round(day_chg_dollar, 2),
+            "day_change_pct":    round(day_chg_pct, 2),
+        })
+    return rows, portfolio_value, total_cost
+
+
+def _build_savings_data(savings_acc: list, today_d: date) -> tuple:
+    """Returns (savings_rows, savings_total, total_accrued)."""
+    rows = []
+    savings_total = 0.0
+    total_accrued = 0.0
+    for acc in savings_acc:
+        savings_total += acc.balance
+        if INTEREST_PAYMENT_DAY:
+            _, next_date  = _payment_dates(INTEREST_PAYMENT_DAY, today_d)
+            days_until    = (next_date - today_d).days
+            acc_interest  = accrued_interest(acc, INTEREST_PAYMENT_DAY, today_d)
+            proj_payment  = projected_next_payment(acc, INTEREST_PAYMENT_DAY, today_d)
+            daily_earn    = acc.balance * acc.apy / 365  # simple daily rate, not compound
+            total_accrued += acc_interest
+        else:
+            days_until = acc_interest = proj_payment = daily_earn = None
+        rows.append({
+            "name":               acc.name,
+            "balance":            round(acc.balance, 2),
+            "apy":                acc.apy,
+            "bank":               acc.bank,
+            "accrued":            round(acc_interest, 4) if acc_interest is not None else None,
+            "projected_payment":  round(proj_payment, 4) if proj_payment is not None else None,
+            "days_until_payment": days_until,
+            "daily_earn":         round(daily_earn, 4) if daily_earn is not None else None,
+        })
+    return rows, savings_total, total_accrued
+
+
+def _build_watchlist_data() -> list:
+    """Returns watchlist_rows. Makes its own fetch calls."""
+    if not WATCHLIST:
+        return []
+    wl_tickers = list(WATCHLIST.keys())
+    wl_prices  = fetch_prices_batch(wl_tickers)
+    wl_history = fetch_watchlist_history(wl_tickers)
+    rows = []
+    for ticker, label in WATCHLIST.items():
+        history = wl_history.get(ticker, {})
+        signal  = _compute_signal(history, MOMENTUM_FLAT_BAND)
+        rows.append({
+            "ticker":  ticker,
+            "label":   label,
+            "price":   round(wl_prices.get(ticker, 0.0), 2),
+            "signal":  signal["type"],
+            "reason":  signal["reason"],
+            "history": history,
+        })
+    return rows
+
+
+def build_payload(prices: dict | None = None, prev_prices: dict | None = None) -> dict:
+    holdings    = load_holdings(HOLDINGS_FILE)
+    savings_acc = load_savings(SAVINGS_FILE)
+    goals       = load_goals(GOALS_FILE)
+
+    tickers = list(holdings.keys())
+    if prices is None:
+        raw         = fetch_prices_with_change(tickers) if tickers else {}
+        prices      = {t: v['price']      for t, v in raw.items()}
+        prev_prices = {t: v['prev_close'] for t, v in raw.items()}
+    prev_prices = prev_prices or {}
+
+    holding_rows, portfolio_value, total_cost = _build_holdings_data(holdings, prices, prev_prices)
+    holding_rows.sort(key=lambda r: r["value"], reverse=True)
+
+    savings_rows, savings_total, total_accrued = _build_savings_data(savings_acc, date.today())
+
+    total_gain_pct = ((portfolio_value - total_cost) / total_cost * 100) if total_cost > 0 else 0.0
+    portfolio_goal = goals.get("__portfolio__")
+    savings_goal   = goals.get("__savings__")
+
+    return {
+        "generated": datetime.now(timezone.utc).isoformat(),
+        "savings":   savings_rows,
+        "holdings":  holding_rows,
+        "watchlist": _build_watchlist_data(),
+        "totals": {
+            "portfolio_value":  round(portfolio_value, 2),
+            "savings_total":    round(savings_total, 2),
+            "total_cost":       round(total_cost, 2),
+            "total_gain_pct":   round(total_gain_pct, 2),
+            "portfolio_goal":   portfolio_goal,
+            "savings_goal":     savings_goal,
+            "total_accrued":    round(total_accrued, 4) if INTEREST_PAYMENT_DAY else None,
+            "payment_day":      INTEREST_PAYMENT_DAY,
+        },
+    }
+
+
+def build_html(payload: dict) -> Path:
+    injected = TEMPLATE.read_text().replace(
+        "// __DASH_DATA_PLACEHOLDER__",
+        f"window.__DASH__ = {json.dumps(payload, indent=2)};",
+    )
+    OUT_FILE.parent.mkdir(parents=True, exist_ok=True)
+    OUT_FILE.write_text(injected)
+    return OUT_FILE
+
+
+def main():
+    print("Fetching portfolio data…")
+    out = build_html(build_payload())
+    print(f"Dashboard written to {out}")
+    try:
+        webbrowser.open(out.as_uri())
+    except Exception:
+        print(f"  Open manually → {out.as_uri()}")
+
+
+if __name__ == "__main__":
+    main()

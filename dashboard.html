@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Vero</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:     #080808;
+  --border: #1a1a1a;
+  --text:   #b8b8b8;
+  --dim:    #686868;
+  --cream:  #f2e6cc;
+  --tan:    #c8b89a;
+  --gold:   #d4956a;
+  --orange: #FF8003;
+  --neg:    #c86030;
+  --font:   'Courier New', Courier, monospace;
+}
+
+html, body {
+  width: 100%; min-height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+}
+
+/* ── Header ─────────────────────────────────────────────────────────────── */
+#header {
+  position: sticky; top: 0; z-index: 100;
+  display: flex; align-items: center; gap: 20px;
+  padding: 13px 28px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+}
+
+#header-title {
+  position: fixed; left: 50%; transform: translateX(-50%);
+  font-size: 16px; font-weight: bold;
+  letter-spacing: 0.20em; color: var(--tan);
+  pointer-events: none;
+}
+
+#header-gain {
+  margin-left: auto;
+  font-size: 14px; letter-spacing: 0.08em;
+  transition: opacity 60ms;
+}
+
+#header-status {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 13px; letter-spacing: 0.12em; color: var(--dim);
+}
+
+#status-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--dim);
+}
+#status-dot.live {
+  background: var(--tan);
+  animation: dot-pulse 2.4s ease-in-out infinite;
+}
+@keyframes dot-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.25; }
+}
+
+#header-time {
+  font-size: 13px; color: var(--dim);
+  letter-spacing: 0.06em; margin-left: 14px;
+}
+#header-brand {
+  font-size: 14px; letter-spacing: 0.14em; color: var(--tan);
+}
+#header-staleness {
+  font-size: 13px; letter-spacing: 0.06em;
+  transition: color 0.4s;
+}
+#header-staleness.stale { color: var(--gold); }
+#header-staleness.old   { color: var(--orange); }
+
+/* ── Main grid ──────────────────────────────────────────────────────────── */
+#main {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background: var(--border);
+  min-height: calc(100vh - 50px);
+}
+
+/* ── Panel ──────────────────────────────────────────────────────────────── */
+.panel {
+  background: var(--bg);
+  padding: 32px 32px 40px;
+  display: flex; flex-direction: column; gap: 28px;
+}
+.panel--full { grid-column: 1 / -1; }
+
+.panel-header {
+  display: flex; justify-content: flex-start; align-items: baseline; gap: 16px;
+}
+.panel-label {
+  font-size: 12px; letter-spacing: 0.24em;
+  color: var(--dim); text-transform: uppercase;
+}
+.panel-value {
+  font-size: 32px; color: var(--tan);
+  letter-spacing: 0.04em; font-weight: bold;
+}
+
+/* ── Doughnut chart ─────────────────────────────────────────────────────── */
+.chart-container {
+  position: relative;
+  width: 100%; max-width: 300px;
+  min-height: 280px;
+  margin: 0 auto;
+  aspect-ratio: 1 / 1;
+}
+
+/* ── Progress bar ───────────────────────────────────────────────────────── */
+.progress-wrap { display: flex; flex-direction: column; gap: 7px; }
+
+.progress-meta {
+  display: flex; justify-content: space-between; align-items: baseline;
+  font-size: 13px; letter-spacing: 0.08em;
+}
+.progress-meta .lbl { color: var(--dim); }
+.progress-meta .pct { color: var(--tan); }
+
+.progress-track {
+  width: 100%; height: 8px;
+  background: var(--border);
+  border-radius: 4px; overflow: hidden;
+}
+.progress-fill {
+  height: 100%; width: 0; border-radius: 4px;
+  background: linear-gradient(90deg,
+    var(--cream)  0%,
+    var(--tan)   28%,
+    var(--gold)  58%,
+    var(--orange) 100%
+  );
+  box-shadow: 0 0 10px 1px rgba(255, 128, 3, 0.55),
+              0 0 4px  1px rgba(255, 200, 100, 0.3);
+  position: relative;
+  overflow: hidden;
+  animation: fill-bar 1.6s 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+.progress-fill::after {
+  content: '';
+  position: absolute;
+  top: 0; bottom: 0;
+  left: -55%;
+  width: 55%;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.45) 50%,
+    transparent 100%
+  );
+  animation: akira-shimmer 2.4s 2.3s ease-in-out infinite;
+}
+@keyframes fill-bar { to { width: var(--pct, 0%); } }
+@keyframes akira-shimmer {
+  0%   { left: -55%; opacity: 0.7; }
+  60%  { opacity: 1; }
+  100% { left: 120%; opacity: 0.7; }
+}
+
+.progress-foot {
+  display: flex; justify-content: space-between;
+  font-size: 12px; color: var(--dim); letter-spacing: 0.06em;
+}
+
+.goal-hint {
+  font-size: 12px; color: var(--dim);
+  letter-spacing: 0.04em; line-height: 1.6;
+  padding: 2px 0;
+}
+
+/* ── Data table ─────────────────────────────────────────────────────────── */
+.table-label {
+  font-size: 12px; letter-spacing: 0.22em;
+  color: var(--dim); text-transform: uppercase;
+  margin-bottom: 12px;
+}
+
+.data-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 14px; gap: 8px;
+}
+.data-row:last-child { border-bottom: none; }
+
+.dr-left {
+  color: var(--tan); min-width: 72px;
+  letter-spacing: 0.06em; font-size: 14px;
+}
+.dr-mid {
+  color: var(--dim); flex: 1;
+  font-size: 13px; overflow: hidden;
+  white-space: nowrap; text-overflow: ellipsis;
+}
+.dr-right {
+  text-align: right; min-width: 80px;
+  font-size: 14px; color: var(--tan);
+}
+.dr-sub {
+  display: block; font-size: 12px;
+  color: var(--dim); margin-top: 1px;
+}
+.dr-sub.pos { color: var(--tan); }
+.dr-sub.neg { color: var(--neg); }
+
+/* ── Holding metrics bar ────────────────────────────────────────────────── */
+.holding-metrics {
+  display: flex; gap: 18px; flex-wrap: wrap;
+  padding: 2px 0 10px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px; letter-spacing: 0.04em;
+}
+.holding-metrics:last-child { border-bottom: none; }
+.hm-seg { display: flex; align-items: baseline; gap: 5px; }
+.hm-label { font-size: 11px; color: var(--dim); letter-spacing: 0.10em; text-transform: uppercase; }
+.hm-val   { color: var(--tan); }
+.hm-pos   { color: var(--tan); }
+.hm-neg   { color: var(--neg); }
+
+/* ── Watchlist ──────────────────────────────────────────────────────────── */
+.wl-tf-bar {
+  display: flex; gap: 5px; align-items: center;
+  margin-left: auto;
+}
+.wl-tf {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--dim);
+  font-family: var(--font);
+  font-size: 12px; letter-spacing: 0.12em;
+  padding: 3px 9px; cursor: pointer; border-radius: 2px;
+  transition: color 0.15s, border-color 0.15s;
+}
+.wl-tf:hover  { color: var(--tan);    border-color: var(--tan); }
+.wl-tf.active { color: var(--orange); border-color: var(--orange); }
+
+.wl-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 1.4fr) 110px 190px 1fr 220px;
+  align-items: center;
+  gap: 20px;
+  padding: 13px 0;
+  border-bottom: 1px solid var(--border);
+}
+.wl-row:last-child { border-bottom: none; }
+
+.wl-name  { font-size: 14px; color: var(--tan); letter-spacing: 0.06em; }
+.wl-tick  { font-size: 12px; color: var(--dim); letter-spacing: 0.10em; margin-top: 3px; }
+.wl-price { font-size: 16px; color: var(--tan); letter-spacing: 0.04em; font-weight: bold; }
+
+.wl-signal          { font-size: 13px; letter-spacing: 0.10em; }
+.wl-signal.BULLISH  { color: #00d56f; }
+.wl-signal.BEARISH  { color: #d71200; }
+.wl-signal.NEUTRAL  { color: var(--orange); }
+.wl-reason { font-size: 12px; color: var(--dim); letter-spacing: 0.06em; margin-top: 3px; }
+
+.wl-sparkline { display: block; width: 220px; height: 48px; }
+
+.wl-empty {
+  font-size: 13px; color: var(--dim); letter-spacing: 0.10em;
+  padding: 28px 0; text-align: center;
+}
+
+/* ── Scrollbar ──────────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--dim); border-radius: 2px; }
+
+/* ── Reduced motion ─────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <header id="header">
+    <span id="header-brand">vedra &amp; co</span>
+    <span id="header-title"></span>
+    <span id="header-gain"></span>
+    <div id="header-status">
+      <span id="status-dot"></span>
+      <span id="status-label">OFFLINE</span>
+    </div>
+    <span id="header-staleness"></span>
+    <span id="header-time"></span>
+  </header>
+
+  <main id="main">
+
+    <!-- Savings panel (LEFT) -->
+    <section class="panel">
+      <div class="panel-header">
+        <span class="panel-label">SAVINGS</span>
+        <span class="panel-value" id="val-savings">—</span>
+      </div>
+      <div class="chart-container">
+        <canvas id="chart-savings"
+                role="img"
+                aria-label="Savings accounts breakdown by balance"></canvas>
+      </div>
+      <div id="prog-savings"></div>
+      <div>
+        <div class="table-label">ACCOUNTS</div>
+        <div id="savings-list"></div>
+      </div>
+    </section>
+
+    <!-- Portfolio panel (RIGHT) -->
+    <section class="panel">
+      <div class="panel-header">
+        <span class="panel-label">PORTFOLIO</span>
+        <span class="panel-value" id="val-portfolio">—</span>
+      </div>
+      <div class="chart-container">
+        <canvas id="chart-portfolio"
+                role="img"
+                aria-label="Portfolio holdings breakdown by value"></canvas>
+      </div>
+      <div id="prog-portfolio"></div>
+      <div>
+        <div class="table-label">HOLDINGS</div>
+        <div id="holdings-list"></div>
+      </div>
+    </section>
+
+    <!-- Watchlist panel (full width) -->
+    <section class="panel panel--full" id="watchlist-panel">
+      <div class="panel-header">
+        <span class="panel-label">WATCHLIST</span>
+        <div class="wl-tf-bar">
+          <button class="wl-tf active" data-tf="1W">1W</button>
+          <button class="wl-tf" data-tf="1M">1M</button>
+          <button class="wl-tf" data-tf="3M">3M</button>
+          <button class="wl-tf" data-tf="6M">6M</button>
+          <button class="wl-tf" data-tf="YTD">YTD</button>
+        </div>
+      </div>
+      <div id="watchlist-rows"></div>
+    </section>
+
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"
+        integrity="sha256-s4B2di9zY7yekStouOA0gmeY213ya7YfAA7C56MTe8c="
+        crossorigin="anonymous"></script>
+
+<script>
+// __DASH_DATA_PLACEHOLDER__
+</script>
+
+<script>
+'use strict';
+
+const D       = window.__DASH__ || { savings: [], holdings: [], watchlist: [], totals: {} };
+const T       = D.totals || {};
+const REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const SLICE_COLORS = [
+  '#c8b89a', '#d4956a', '#FF8003', '#a07848',
+  '#6b4c2a', '#e8c870', '#8B6914',
+];
+
+// ── CSS variable reader ─────────────────────────────────────────────────────
+function cssVar(name) {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
+// ── Formatters ──────────────────────────────────────────────────────────────
+function fmt$(v) {
+  return '$' + (+v || 0).toLocaleString('en-US', {
+    minimumFractionDigits: 0, maximumFractionDigits: 0,
+  });
+}
+function fmtPct(v) {
+  return (v >= 0 ? '+' : '') + (+v || 0).toFixed(2) + '%';
+}
+function fmtPrice(v) {
+  return '$' + (+v || 0).toLocaleString('en-US', {
+    minimumFractionDigits: 2, maximumFractionDigits: 2,
+  });
+}
+function fmtSigned$(v) {
+  const n = +v || 0;
+  return (n >= 0 ? '+$' : '-$') + Math.abs(n).toLocaleString('en-US', {
+    minimumFractionDigits: 2, maximumFractionDigits: 2,
+  });
+}
+
+// ── HTML escaping ───────────────────────────────────────────────────────────
+function escapeHTML(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+// ── Typewriter ──────────────────────────────────────────────────────────────
+function typeWriter(el, text, msPer, cb) {
+  if (REDUCED) { el.textContent = text; cb && cb(); return; }
+  let i = 0;
+  const id = setInterval(() => {
+    el.textContent += text[i++];
+    if (i >= text.length) { clearInterval(id); cb && cb(); }
+  }, msPer);
+}
+
+// ── Doughnut chart ──────────────────────────────────────────────────────────
+function buildDoughnut(canvasId, labels, values) {
+  const canvasCtx = document.getElementById(canvasId).getContext('2d');
+  const total     = values.reduce((a, b) => a + b, 0);
+  const colors    = SLICE_COLORS.slice(0, Math.max(values.length, 1));
+
+  return new Chart(canvasCtx, {
+    type: 'doughnut',
+    data: {
+      labels,
+      datasets: [{
+        data:             values,
+        backgroundColor:  colors,
+        borderColor:      cssVar('--bg'),
+        borderWidth:      2,
+        hoverBorderWidth: 3,
+        hoverBorderColor: cssVar('--tan'),
+      }],
+    },
+    options: {
+      cutout: '62%',
+      animation: REDUCED ? false : { duration: 1200, easing: 'easeOutQuart' },
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: {
+            color:     cssVar('--dim'),
+            font:      { family: 'Courier New', size: 13 },
+            padding:   16,
+            boxWidth:  10,
+            boxHeight: 10,
+          },
+        },
+        tooltip: {
+          backgroundColor: '#111111',
+          borderColor:     cssVar('--border'),
+          borderWidth:     1,
+          titleColor:      cssVar('--tan'),
+          bodyColor:       cssVar('--text'),
+          titleFont:       { family: 'Courier New', size: 14 },
+          bodyFont:        { family: 'Courier New', size: 13 },
+          padding:         10,
+          callbacks: {
+            label(tooltipCtx) {
+              const pct = total > 0 ? (tooltipCtx.raw / total * 100).toFixed(1) : '0.0';
+              return `  ${fmt$(tooltipCtx.raw)}  (${pct}%)`;
+            },
+          },
+        },
+      },
+    },
+  });
+}
+
+// ── Progress bar ────────────────────────────────────────────────────────────
+function renderProgressBar(containerId, current, goal, type) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+
+  if (!goal) {
+    el.innerHTML = `<p class="goal-hint">No goal set &mdash; run:&nbsp;
+      <span style="color:var(--text)">portfolio goal set ${type} AMOUNT</span></p>`;
+    return;
+  }
+
+  const pct    = Math.min(current / goal * 100, 100);
+  const pctStr = pct.toFixed(1) + '%';
+
+  el.innerHTML = `
+    <div class="progress-wrap">
+      <div class="progress-meta">
+        <span class="lbl">GOAL PROGRESS</span>
+        <span class="pct">${pctStr}</span>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" style="--pct:${pctStr}"></div>
+      </div>
+      <div class="progress-foot">
+        <span>${fmt$(current)}</span>
+        <span>Goal&nbsp;${fmt$(goal)}</span>
+      </div>
+    </div>`;
+}
+
+// ── Holdings table ───────────────────────────────────────────────────────────
+function renderHoldings() {
+  const el       = document.getElementById('holdings-list');
+  const holdings = D.holdings || [];
+  if (!holdings.length) {
+    el.innerHTML = `<div class="data-row"><span class="dr-mid">No holdings yet.</span></div>`;
+    return;
+  }
+  el.innerHTML = holdings.map((h, i) => {
+    const CORP_SUFFIXES = /\s+(Company|Corporation|Corp\.?|Inc\.?|Ltd\.?|LLC|L\.L\.C\.|PLC|N\.A\.|Incorporated|Limited)$/i;
+    const shortLabel = h.label ? h.label.replace(CORP_SUFFIXES, '').trim() : '';
+    const gainCls   = h.gain_pct > 0 ? 'pos' : h.gain_pct < 0 ? 'neg' : '';
+    const gainArrow = h.gain_pct > 0 ? '▲' : h.gain_pct < 0 ? '▼' : '—';
+    const dayCls    = h.day_change_pct > 0 ? 'hm-pos' : h.day_change_pct < 0 ? 'hm-neg' : 'hm-val';
+    const gainHmCls = h.gain_dollar > 0 ? 'hm-pos' : h.gain_dollar < 0 ? 'hm-neg' : 'hm-val';
+    const color     = SLICE_COLORS[i % SLICE_COLORS.length];
+    return `
+      <div class="data-row" style="border-bottom:none;padding-bottom:6px">
+        <span class="dr-left" style="color:${color}">${escapeHTML(h.ticker)}<span class="dr-sub">${fmtPrice(h.price)}</span></span>
+        <span class="dr-mid">${escapeHTML(shortLabel)}</span>
+        <span class="dr-right">
+          ${fmt$(h.value)}
+          <span class="dr-sub ${gainCls}">${gainArrow} ${fmtPct(h.gain_pct)}<span style="color:var(--dim)"> · basis ${fmt$(h.cost)}</span></span>
+        </span>
+      </div>
+      <div class="holding-metrics">
+        <div class="hm-seg"><span class="hm-label">Today</span><span class="${dayCls}">${fmtSigned$(h.day_change_dollar)} (${fmtPct(h.day_change_pct)})</span></div>
+        <div class="hm-seg"><span class="hm-label">P&amp;L</span><span class="${gainHmCls}">${fmtSigned$(h.gain_dollar)}</span></div>
+      </div>`;
+  }).join('');
+}
+
+// ── Savings table ────────────────────────────────────────────────────────────
+function renderSavings() {
+  const el      = document.getElementById('savings-list');
+  const savings = D.savings || [];
+  if (!savings.length) {
+    el.innerHTML = `<div class="data-row"><span class="dr-mid">No savings accounts yet.</span></div>`;
+    return;
+  }
+  const pd = T.payment_day;
+  el.innerHTML = savings.map((s, i) => {
+    const color = SLICE_COLORS[i % SLICE_COLORS.length];
+    const metricsBar = (pd && s.accrued != null) ? `
+    <div class="holding-metrics">
+      <div class="hm-seg"><span class="hm-label">Daily</span><span class="hm-pos">+${fmtPrice(s.daily_earn)}/d</span></div>
+      <div class="hm-seg"><span class="hm-label">Accrued</span><span class="hm-pos">+${fmtPrice(s.accrued)}</span></div>
+      <div class="hm-seg"><span class="hm-label">Next</span><span class="hm-pos">+${fmtPrice(s.projected_payment)}</span><span class="hm-label"> in ${s.days_until_payment}d</span></div>
+    </div>` : '';
+    return `
+    <div class="data-row" style="border-bottom:${metricsBar ? 'none' : ''}">
+      <span class="dr-left" style="color:${color}">${escapeHTML(s.name)}</span>
+      <span class="dr-mid">${escapeHTML(s.bank || '')}</span>
+      <span class="dr-right">
+        ${fmt$(s.balance)}
+        <span class="dr-sub">${(s.apy * 100).toFixed(2)}% APY</span>
+      </span>
+    </div>${metricsBar}`;
+  }).join('');
+}
+
+// ── Digit flicker ────────────────────────────────────────────────────────────
+function scheduleFlicker(el) {
+  if (REDUCED) return;
+  const delay = 4000 + Math.random() * 5000;
+  setTimeout(() => {
+    el.style.opacity = '0.3';
+    setTimeout(() => {
+      el.style.opacity = '';
+      scheduleFlicker(el);
+    }, 55);
+  }, delay);
+}
+
+// ── Header ───────────────────────────────────────────────────────────────────
+function renderHeader() {
+  typeWriter(document.getElementById('header-title'), 'VERO', 14);
+
+  const gainEl = document.getElementById('header-gain');
+  const pct    = T.total_gain_pct || 0;
+  gainEl.textContent = fmtPct(pct);
+  gainEl.style.color = pct >= 0 ? 'var(--tan)' : 'var(--neg)';
+  scheduleFlicker(gainEl);
+
+  if (D.generated) {
+    document.getElementById('status-dot').classList.add('live');
+    document.getElementById('status-label').textContent = 'LIVE';
+  }
+
+  const generatedMs = D.generated ? new Date(D.generated).getTime() : null;
+  const stalenessEl = document.getElementById('header-staleness');
+  const updateStaleness = () => {
+    if (!generatedMs) { stalenessEl.textContent = ''; return; }
+    const mins = Math.floor((Date.now() - generatedMs) / 60000);
+    const label = mins < 1   ? 'data: just now'
+                : mins < 60  ? `data: ${mins}m ago`
+                : `data: ${Math.floor(mins / 60)}h ${mins % 60}m ago`;
+    stalenessEl.textContent = label;
+    stalenessEl.className   = mins >= 60 ? 'old' : mins >= 15 ? 'stale' : '';
+  };
+  updateStaleness();
+  setInterval(updateStaleness, 60000);
+
+  const tickTime = () => {
+    document.getElementById('header-time').textContent =
+      new Date().toLocaleTimeString('en-US', { hour12: false });
+  };
+  tickTime();
+  setInterval(tickTime, 60000);
+}
+
+// ── Sparklines (Akira-style) ─────────────────────────────────────────────────
+
+const WL_W = 220, WL_H = 48;
+
+function drawSparkline(canvas, prices) {
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width  = WL_W * dpr;
+  canvas.height = WL_H * dpr;
+  canvas.style.width  = WL_W + 'px';
+  canvas.style.height = WL_H + 'px';
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  const W = WL_W, H = WL_H;
+
+  if (!prices || prices.length < 2) {
+    ctx.strokeStyle = 'rgba(104,104,104,0.25)';
+    ctx.lineWidth   = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, H / 2);
+    ctx.lineTo(W, H / 2);
+    ctx.stroke();
+    return;
+  }
+
+  const n   = prices.length;
+  const min = Math.min(...prices);
+  const max = Math.max(...prices);
+  const rng = max - min || 1;
+  const PAD = 5;
+
+  function xp(i) { return (i / (n - 1)) * W; }
+  function yp(v) { return H - PAD - ((v - min) / rng) * (H - PAD * 2); }
+
+  function makeGrads() {
+    const lg = ctx.createLinearGradient(0, 0, W, 0);
+    lg.addColorStop(0,    '#f2e6cc');
+    lg.addColorStop(0.28, '#c8b89a');
+    lg.addColorStop(0.58, '#d4956a');
+    lg.addColorStop(1,    '#FF8003');
+
+    const fg = ctx.createLinearGradient(0, 0, 0, H);
+    fg.addColorStop(0, 'rgba(255,128,3,0.18)');
+    fg.addColorStop(1, 'rgba(255,128,3,0)');
+
+    return { lg, fg };
+  }
+
+  function drawStatic(count) {
+    const { lg, fg } = makeGrads();
+    const c = Math.max(2, count || n);
+    ctx.clearRect(0, 0, W, H);
+
+    ctx.beginPath();
+    ctx.moveTo(xp(0), yp(prices[0]));
+    for (let i = 1; i < c; i++) ctx.lineTo(xp(i), yp(prices[i]));
+    ctx.lineTo(xp(c - 1), H);
+    ctx.lineTo(xp(0), H);
+    ctx.closePath();
+    ctx.fillStyle = fg;
+    ctx.fill();
+
+    ctx.save();
+    ctx.shadowBlur  = 7;
+    ctx.shadowColor = 'rgba(255,128,3,0.75)';
+    ctx.beginPath();
+    ctx.moveTo(xp(0), yp(prices[0]));
+    for (let i = 1; i < c; i++) ctx.lineTo(xp(i), yp(prices[i]));
+    ctx.strokeStyle = lg;
+    ctx.lineWidth   = 1.8;
+    ctx.lineJoin    = 'round';
+    ctx.lineCap     = 'round';
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  if (REDUCED) { drawStatic(n); return; }
+
+  const t0  = performance.now();
+  const dur = 800;
+
+  function drawFrame(now) {
+    const t     = Math.min((now - t0) / dur, 1);
+    const eased = 1 - Math.pow(1 - t, 3);
+    drawStatic(Math.max(2, Math.round(eased * n)));
+    if (t < 1) { requestAnimationFrame(drawFrame); return; }
+    drawStatic(n);
+    const s0 = performance.now(), sd = 650;
+    function shimmer(ts) {
+      const st  = Math.min((ts - s0) / sd, 1);
+      drawStatic(n);
+      const sx  = (st * 1.6 - 0.3) * W;
+      const sg  = ctx.createLinearGradient(sx - W * 0.18, 0, sx + W * 0.18, 0);
+      sg.addColorStop(0,   'rgba(255,255,255,0)');
+      sg.addColorStop(0.5, 'rgba(255,255,255,0.22)');
+      sg.addColorStop(1,   'rgba(255,255,255,0)');
+      ctx.fillStyle = sg;
+      ctx.fillRect(0, 0, W, H);
+      if (st < 1) requestAnimationFrame(shimmer);
+    }
+    requestAnimationFrame(shimmer);
+  }
+  requestAnimationFrame(drawFrame);
+}
+
+// ── Watchlist ────────────────────────────────────────────────────────────────
+
+let activeTF = '1W';
+
+const SIGNAL_ICON = { BULLISH: '▲', BEARISH: '▼', NEUTRAL: '~' };
+
+function drawAllSparklines() {
+  const watchlist = D.watchlist || [];
+  watchlist.forEach((w, i) => {
+    const canvas = document.getElementById(`wl-canvas-${i}`);
+    if (!canvas) return;
+    drawSparkline(canvas, (w.history || {})[activeTF] || []);
+  });
+}
+
+function renderWatchlist() {
+  const container = document.getElementById('watchlist-rows');
+  const watchlist = D.watchlist || [];
+
+  if (!watchlist.length) {
+    container.innerHTML = `<div class="wl-empty">Add tickers to WATCHLIST in config.py to see live signals here.</div>`;
+    return;
+  }
+
+  container.innerHTML = watchlist.map((w, i) => `
+    <div class="wl-row">
+      <div>
+        <div class="wl-name">${escapeHTML(w.label)}</div>
+        <div class="wl-tick">${escapeHTML(w.ticker)}</div>
+      </div>
+      <div class="wl-price">${fmtPrice(w.price)}</div>
+      <div>
+        <div class="wl-signal ${escapeHTML(w.signal)}">${SIGNAL_ICON[w.signal] || '~'} ${escapeHTML(w.signal)}</div>
+        <div class="wl-reason">${escapeHTML(w.reason || '')}</div>
+      </div>
+      <div></div>
+      <canvas class="wl-sparkline" id="wl-canvas-${i}"></canvas>
+    </div>
+  `).join('');
+
+  drawAllSparklines();
+}
+
+// ── Boot ─────────────────────────────────────────────────────────────────────
+(function init() {
+  renderHeader();
+
+  document.getElementById('val-portfolio').textContent = fmt$(T.portfolio_value || 0);
+  document.getElementById('val-savings').textContent   = fmt$(T.savings_total   || 0);
+
+  const holdings = D.holdings || [];
+  buildDoughnut(
+    'chart-portfolio',
+    holdings.length ? holdings.map(h => h.ticker) : ['—'],
+    holdings.length ? holdings.map(h => h.value)  : [1],
+  );
+
+  const savings = D.savings || [];
+  buildDoughnut(
+    'chart-savings',
+    savings.length ? savings.map(s => s.name)    : ['—'],
+    savings.length ? savings.map(s => s.balance) : [1],
+  );
+
+  renderProgressBar('prog-portfolio', T.portfolio_value || 0, T.portfolio_goal || null, 'portfolio');
+  renderProgressBar('prog-savings',   T.savings_total   || 0, T.savings_goal   || null, 'savings');
+
+  document.querySelector('.wl-tf-bar')?.addEventListener('click', e => {
+    const btn = e.target.closest('.wl-tf');
+    if (!btn) return;
+    document.querySelectorAll('.wl-tf').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeTF = btn.dataset.tf;
+    drawAllSparklines();
+  });
+
+  renderHoldings();
+  renderSavings();
+  renderWatchlist();
+})();
+</script>
+</body>
+</html>

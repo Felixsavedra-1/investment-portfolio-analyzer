@@ -1,0 +1,55 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environment
+venv/
+env/
+ENV/
+.env
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# macOS
+.DS_Store
+
+
+# Portfolio data — lives in ~/.portfolio/, not in the repo
+holdings.json
+transactions.json
+savings.json
+
+# Generated output — lives in ~/.portfolio/, not in the repo
+portfolio_analysis.png
+
+# Keep repo assets
+!docs/
+
+# Personal config overrides — never commit your watchlist/picks
+config_local.py
+
+# Claude Code project instructions
+CLAUDE.md

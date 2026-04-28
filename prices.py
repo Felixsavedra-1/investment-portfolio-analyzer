@@ -6,6 +6,8 @@ All other modules receive price data as plain dicts.
 """
 
 import json
+import os
+import re
 import sys
 import warnings
 from contextlib import contextmanager
@@ -45,22 +47,16 @@ def _is_cache_fresh(entry: dict) -> bool:
 
 
 def _first_sentences(text: str, n: int = 3) -> str:
-    """Extract the first n sentences from text."""
-    import re
     sentences = re.split(r'(?<=[.!?])\s+', text.strip())
     return ' '.join(sentences[:n])
 
 
 def _rewrite_description(raw: str, ticker: str) -> str:
-    """
-    Rewrite via Claude if ANTHROPIC_API_KEY is set; otherwise extract first 3 sentences.
-    Claude is an optional dependency — the project works without it.
-    """
-    import os
+    """Rewrite via Claude if ANTHROPIC_API_KEY is set; else fall back to first sentences."""
     if not os.environ.get('ANTHROPIC_API_KEY'):
         return _first_sentences(raw)
     try:
-        import anthropic
+        import anthropic   # optional dependency
         client = anthropic.Anthropic()
         msg = client.messages.create(
             model='claude-haiku-4-5',
@@ -127,9 +123,14 @@ def fetch_prices_batch(tickers: List[str]) -> Dict[str, float]:
     if data.empty:
         return {}
 
-    close = data['Close'] if isinstance(data.columns, pd.MultiIndex) else data[['Close']]
+    if isinstance(data.columns, pd.MultiIndex):
+        close = data['Close']
+    else:
+        # Single-ticker call: yfinance returns a flat column index. Name the
+        # 'Close' column after the ticker so downstream lookup by ticker works.
+        close = data[['Close']].rename(columns={'Close': tickers[0]})
     if isinstance(close, pd.Series):
-        close = close.to_frame()
+        close = close.to_frame(name=tickers[0])
 
     last = close.ffill().iloc[-1]
     prices = {
@@ -166,11 +167,11 @@ def fetch_historical_price(ticker: str, date_str: str) -> float:
 
 
 def fetch_label(ticker: str) -> str:
-    """Human-readable name, falls back to ticker symbol."""
+    """Human-readable name, falls back to ticker symbol on any failure (incl. network)."""
     try:
         info = yf.Ticker(ticker).info
         return info.get('shortName') or info.get('longName') or ticker
-    except (AttributeError, KeyError, TypeError):
+    except Exception:
         return ticker
 
 

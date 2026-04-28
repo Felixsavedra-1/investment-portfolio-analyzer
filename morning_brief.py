@@ -38,7 +38,7 @@ from ledger import (
     _payment_dates, accrued_interest, projected_next_payment,
     cost_basis_weights, load_holdings, load_savings, load_transactions,
 )
-from metrics import risk_snapshot as _compute_risk_snapshot
+from metrics import momentum_signal, risk_snapshot as _compute_risk_snapshot
 from prices import yf_warnings
 
 logger = logging.getLogger(__name__)
@@ -184,6 +184,22 @@ class MorningBrief:
             return float('nan')
         s = self._prices[ticker].dropna()
         return float(s.iloc[-1]) if not s.empty else float('nan')
+
+    def latest_prices(self) -> Dict[str, float]:
+        """Most-recent close per holding ticker. Tickers with no data are omitted."""
+        return {
+            t: float(self._prices[t].dropna().iloc[-1])
+            for t in self.holdings
+            if t in self._prices.columns and not self._prices[t].dropna().empty
+        }
+
+    def previous_prices(self) -> Dict[str, float]:
+        """Penultimate close per holding ticker (for day-change). Tickers with <2 obs omitted."""
+        return {
+            t: float(self._prices[t].dropna().iloc[-2])
+            for t in self.holdings
+            if t in self._prices.columns and len(self._prices[t].dropna()) >= 2
+        }
 
     def _current_portfolio_value(self) -> float:
         """Falls back to cost basis for any ticker missing from price data."""
@@ -410,33 +426,12 @@ class MorningBrief:
         )
 
     def _watchlist_signal(self, ticker: str) -> tuple:
-        """
-        Momentum signal driven by three time horizons.
-
-        BULLISH  — 1M positive (uptrend intact)
-          'dip in uptrend'   if 1D or 1W is negative (short-term pullback)
-          'strong momentum'  if all three periods positive
-        BEARISH  — 1M negative (broader downtrend)
-          'bounce in downtrend'  if 1D or 1W is positive
-          'downtrend'            otherwise
-        NEUTRAL  — 1M within ±1%, or insufficient history
-        """
-        r1d = self._period_return(ticker, BRIEF_WINDOW_1D)
-        r1w = self._period_return(ticker, BRIEF_WINDOW_1W)
-        r1m = self._period_return(ticker, BRIEF_WINDOW_1M)
-
-        if not all(np.isfinite(v) for v in (r1d, r1w, r1m)):
-            return 'NEUTRAL', 'insufficient data'
-
-        if r1m < -MOMENTUM_FLAT_BAND:
-            reason = 'bounce in downtrend' if (r1d > 0 or r1w > 0) else 'downtrend'
-            return 'BEARISH', reason
-
-        if r1m > MOMENTUM_FLAT_BAND:
-            reason = 'dip in uptrend' if (r1d < 0 or r1w < 0) else 'strong momentum'
-            return 'BULLISH', reason
-
-        return 'NEUTRAL', 'mixed signals'
+        return momentum_signal(
+            self._period_return(ticker, BRIEF_WINDOW_1D),
+            self._period_return(ticker, BRIEF_WINDOW_1W),
+            self._period_return(ticker, BRIEF_WINDOW_1M),
+            MOMENTUM_FLAT_BAND,
+        )
 
 
 def main() -> None:
@@ -463,18 +458,11 @@ def main() -> None:
     brief.fetch()
     brief.render()
 
-    # Reuse prices already fetched for the brief — no second network call
-    prices = {
-        t: float(brief._prices[t].dropna().iloc[-1])
-        for t in brief.holdings
-        if t in brief._prices.columns and not brief._prices[t].dropna().empty
-    }
-    prev_prices = {
-        t: float(brief._prices[t].dropna().iloc[-2])
-        for t in brief.holdings
-        if t in brief._prices.columns and len(brief._prices[t].dropna()) >= 2
-    }
-    out_path = _dashboard.build_html(_dashboard.build_payload(prices=prices, prev_prices=prev_prices))
+    # Reuse prices already fetched for the brief — no second network call.
+    out_path = _dashboard.build_html(_dashboard.build_payload(
+        prices=brief.latest_prices(),
+        prev_prices=brief.previous_prices(),
+    ))
     try:
         import webbrowser
         webbrowser.open(out_path.as_uri())

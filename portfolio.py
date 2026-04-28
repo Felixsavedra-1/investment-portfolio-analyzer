@@ -65,7 +65,7 @@ def _resolve_price(ticker: str, explicit: Optional[float], date_str: Optional[st
     return price
 
 
-def cmd_buy(args: argparse.Namespace, _input: Callable[[str], str] = input) -> None:
+def cmd_buy(args: argparse.Namespace, prompt: Callable[[str], str] = input) -> None:
     ticker   = args.ticker
     dollars  = args.dollars
     date_str = _parse_date(args.date) if args.date else None
@@ -79,7 +79,7 @@ def cmd_buy(args: argparse.Namespace, _input: Callable[[str], str] = input) -> N
     label = None
     if is_new:
         label   = fetch_label(ticker)   # falls back to ticker symbol on failure
-        confirm = _input(
+        confirm = prompt(
             f'\n  Opening new position: {ticker}  [{label}]\n'
             f'  Invest ${dollars:,.2f} — confirm? [y/N] '
         ).strip().lower()
@@ -221,7 +221,7 @@ def cmd_history(args: argparse.Namespace) -> None:
     print(render_history(transactions, ticker=args.ticker, limit=args.limit))
 
 
-def cmd_remove(args: argparse.Namespace, _input: Callable[[str], str] = input) -> None:
+def cmd_remove(args: argparse.Namespace, prompt: Callable[[str], str] = input) -> None:
     ticker   = args.ticker
     holdings = load_holdings(HOLDINGS_FILE)
 
@@ -229,7 +229,7 @@ def cmd_remove(args: argparse.Namespace, _input: Callable[[str], str] = input) -
         sys.exit(f'{ticker} is not in your portfolio.')
 
     h = holdings[ticker]
-    confirm = _input(
+    confirm = prompt(
         f'  Remove {ticker} ({h.shares:.4f} shares, ${h.cost:,.2f} invested)? [y/N] '
     ).strip().lower()
 
@@ -247,102 +247,105 @@ def _ordinal(n: int) -> str:
     return suffix.get(n % 10 if n not in (11, 12, 13) else 0, 'th')
 
 
-def cmd_savings(args: argparse.Namespace) -> None:
+def cmd_savings_set(args: argparse.Namespace) -> None:
     accounts = load_savings(SAVINGS_FILE)
-
-    if args.savings_command == 'set':
-        name     = args.name
-        existing = next((a for a in accounts if a.name == name), None)
-        if args.balance is not None and args.balance < 0:
-            sys.exit('Balance must be non-negative.')
-        if args.apy is not None and args.apy < 0:
-            sys.exit('APY must be non-negative.')
-        if existing:
-            if args.balance is not None: existing.balance = args.balance
-            if args.apy     is not None: existing.apy     = args.apy / 100
-            if args.bank    is not None: existing.bank    = args.bank
-            save_savings(accounts, SAVINGS_FILE)
-            print(f'\n  Updated  {name}  ${existing.balance:,.2f}  ({existing.apy:.2%} APY)\n')
-        else:
-            if args.balance is None:
-                sys.exit('BALANCE is required when adding a new savings account.')
-            if args.apy is None:
-                sys.exit('--apy is required when adding a new savings account.')
-            accounts.append(SavingsAccount(
-                name=name, balance=args.balance, apy=args.apy / 100, bank=args.bank or '',
-            ))
-            save_savings(accounts, SAVINGS_FILE)
-            print(f'\n  Added  {name}  ${args.balance:,.2f}  ({args.apy:.2f}% APY)\n')
-
-    elif args.savings_command == 'remove':
-        filtered = [a for a in accounts if a.name != args.name]
-        if len(filtered) == len(accounts):
-            sys.exit(f"'{args.name}' is not a savings account.")
-        save_savings(filtered, SAVINGS_FILE)
-        print(f'\n  Removed  {args.name}.\n')
-
-    elif args.savings_command == 'interest':
-        if INTEREST_PAYMENT_DAY is None:
-            print('\n  Set INTEREST_PAYMENT_DAY in config.py to track interest accrual.\n')
-            return
-        if not accounts:
-            print('\n  No savings accounts found.\n')
-            return
-
-        today                = date.today()
-        _, next_date         = _payment_dates(INTEREST_PAYMENT_DAY, today)
-        days_until           = (next_date - today).days
-        print(f'\n  Savings interest  ·  payment day: {INTEREST_PAYMENT_DAY}{_ordinal(INTEREST_PAYMENT_DAY)} of every month\n')
-
-        col_w = max(len(a.name) for a in accounts)
-        hdr = (f"  {'Account':<{col_w}}   {'Balance':>12}   {'APY':>5}   "
-               f"{'Daily':>12}   {'Accrued':>12}   {'Next Pmt':>12}   {'In':>6}")
-        div = '  ' + '─' * (len(hdr) - 2)
-        print(hdr)
-        print(div)
-
-        tot_daily = tot_accrued = tot_proj = 0.0
-        for a in accounts:
-            daily        = a.balance * a.apy / 365
-            accrued      = accrued_interest(a, INTEREST_PAYMENT_DAY, today)
-            proj         = projected_next_payment(a, INTEREST_PAYMENT_DAY, today)
-            tot_daily   += daily
-            tot_accrued += accrued
-            tot_proj    += proj
-            print(f"  {a.name:<{col_w}}   ${a.balance:>11,.2f}   {a.apy:>5.2%}   "
-                  f"+${daily:>9,.2f}/d   +${accrued:>9,.2f}   +${proj:>9,.2f}   {days_until:>4}d")
-
-        print(div)
-        print(f"  {'Total':<{col_w}}   {'':>12}   {'':>5}   "
-              f"+${tot_daily:>9,.2f}/d   +${tot_accrued:>9,.2f}   +${tot_proj:>9,.2f}")
-        print()
+    name     = args.name
+    existing = next((a for a in accounts if a.name == name), None)
+    if args.balance is not None and args.balance < 0:
+        sys.exit('Balance must be non-negative.')
+    if args.apy is not None and args.apy < 0:
+        sys.exit('APY must be non-negative.')
+    if existing:
+        if args.balance is not None: existing.balance = args.balance
+        if args.apy     is not None: existing.apy     = args.apy / 100
+        if args.bank    is not None: existing.bank    = args.bank
+        save_savings(accounts, SAVINGS_FILE)
+        print(f'\n  Updated  {name}  ${existing.balance:,.2f}  ({existing.apy:.2%} APY)\n')
+        return
+    if args.balance is None:
+        sys.exit('BALANCE is required when adding a new savings account.')
+    if args.apy is None:
+        sys.exit('--apy is required when adding a new savings account.')
+    accounts.append(SavingsAccount(
+        name=name, balance=args.balance, apy=args.apy / 100, bank=args.bank or '',
+    ))
+    save_savings(accounts, SAVINGS_FILE)
+    print(f'\n  Added  {name}  ${args.balance:,.2f}  ({args.apy:.2f}% APY)\n')
 
 
-def cmd_goal(args: argparse.Namespace) -> None:
+def cmd_savings_remove(args: argparse.Namespace) -> None:
+    accounts = load_savings(SAVINGS_FILE)
+    filtered = [a for a in accounts if a.name != args.name]
+    if len(filtered) == len(accounts):
+        sys.exit(f"'{args.name}' is not a savings account.")
+    save_savings(filtered, SAVINGS_FILE)
+    print(f'\n  Removed  {args.name}.\n')
+
+
+def cmd_savings_interest(_args: argparse.Namespace) -> None:
+    if INTEREST_PAYMENT_DAY is None:
+        print('\n  Set INTEREST_PAYMENT_DAY in config.py to track interest accrual.\n')
+        return
+    accounts = load_savings(SAVINGS_FILE)
+    if not accounts:
+        print('\n  No savings accounts found.\n')
+        return
+
+    today        = date.today()
+    _, next_date = _payment_dates(INTEREST_PAYMENT_DAY, today)
+    days_until   = (next_date - today).days
+    print(f'\n  Savings interest  ·  payment day: {INTEREST_PAYMENT_DAY}{_ordinal(INTEREST_PAYMENT_DAY)} of every month\n')
+
+    col_w = max(len(a.name) for a in accounts)
+    hdr = (f"  {'Account':<{col_w}}   {'Balance':>12}   {'APY':>5}   "
+           f"{'Daily':>12}   {'Accrued':>12}   {'Next Pmt':>12}   {'In':>6}")
+    div = '  ' + '─' * (len(hdr) - 2)
+    print(hdr)
+    print(div)
+
+    tot_daily = tot_accrued = tot_proj = 0.0
+    for a in accounts:
+        daily        = a.balance * a.apy / 365
+        accrued      = accrued_interest(a, INTEREST_PAYMENT_DAY, today)
+        proj         = projected_next_payment(a, INTEREST_PAYMENT_DAY, today)
+        tot_daily   += daily
+        tot_accrued += accrued
+        tot_proj    += proj
+        print(f"  {a.name:<{col_w}}   ${a.balance:>11,.2f}   {a.apy:>5.2%}   "
+              f"+${daily:>9,.2f}/d   +${accrued:>9,.2f}   +${proj:>9,.2f}   {days_until:>4}d")
+
+    print(div)
+    print(f"  {'Total':<{col_w}}   {'':>12}   {'':>5}   "
+          f"+${tot_daily:>9,.2f}/d   +${tot_accrued:>9,.2f}   +${tot_proj:>9,.2f}")
+    print()
+
+
+def cmd_goal_set(args: argparse.Namespace) -> None:
     goals = load_goals(GOALS_FILE)
+    goals[f'__{args.target}__'] = args.amount
+    save_goals(goals, GOALS_FILE)
+    print(f'\n  Goal set: {args.target} → ${args.amount:,.0f}\n')
 
-    if args.goal_command == 'set':
-        key = f'__{args.target}__'
-        goals[key] = args.amount
+
+def cmd_goal_remove(args: argparse.Namespace) -> None:
+    goals = load_goals(GOALS_FILE)
+    key   = f'__{args.target}__'
+    if key in goals:
+        del goals[key]
         save_goals(goals, GOALS_FILE)
-        print(f'\n  Goal set: {args.target} → ${args.amount:,.0f}\n')
+        print(f'\n  Removed {args.target} goal.\n')
+    else:
+        print(f'\n  No {args.target} goal was set.\n')
 
-    elif args.goal_command == 'remove':
-        key = f'__{args.target}__'
-        if key in goals:
-            del goals[key]
-            save_goals(goals, GOALS_FILE)
-            print(f'\n  Removed {args.target} goal.\n')
-        else:
-            print(f'\n  No {args.target} goal was set.\n')
 
-    elif args.goal_command == 'show':
-        pg = goals.get('__portfolio__')
-        sg = goals.get('__savings__')
-        print()
-        print(f'  Portfolio goal:  {f"${pg:,.0f}" if pg is not None else "not set"}')
-        print(f'  Savings goal:    {f"${sg:,.0f}" if sg is not None else "not set"}')
-        print()
+def cmd_goal_show(_args: argparse.Namespace) -> None:
+    goals = load_goals(GOALS_FILE)
+    pg    = goals.get('__portfolio__')
+    sg    = goals.get('__savings__')
+    print()
+    print(f'  Portfolio goal:  {f"${pg:,.0f}" if pg is not None else "not set"}')
+    print(f'  Savings goal:    {f"${sg:,.0f}" if sg is not None else "not set"}')
+    print()
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -362,6 +365,7 @@ def _build_parser() -> argparse.ArgumentParser:
     p_buy.add_argument('--price', type=float, default=None,
                        help='Override price instead of fetching (combine with --date to set both)')
     p_buy.add_argument('--notes', type=str, default='')
+    p_buy.set_defaults(func=cmd_buy)
 
     p_sell = sub.add_parser('sell', help='Sell a position (partial or full)')
     p_sell.add_argument('ticker',  type=str,   help='Ticker symbol')
@@ -371,19 +375,24 @@ def _build_parser() -> argparse.ArgumentParser:
     p_sell.add_argument('--price', type=float, default=None,
                         help='Override price instead of fetching (combine with --date to set both)')
     p_sell.add_argument('--notes', type=str, default='')
+    p_sell.set_defaults(func=cmd_sell)
 
-    sub.add_parser('show', help='Show current holdings with live prices and P&L')
+    sub.add_parser('show', help='Show current holdings with live prices and P&L'
+                   ).set_defaults(func=cmd_show)
 
     p_gains = sub.add_parser('gains', help='Show realized and unrealized P&L breakdown')
     p_gains.add_argument('--ticker', type=str, default=None, help='Filter to a single ticker')
+    p_gains.set_defaults(func=cmd_gains)
 
     p_hist = sub.add_parser('history', help='Show transaction log')
     p_hist.add_argument('--ticker', type=str, default=None, help='Filter to a single ticker')
     p_hist.add_argument('--limit', type=int, default=None,
                         help='Show only the N most recent transactions')
+    p_hist.set_defaults(func=cmd_history)
 
     p_rem = sub.add_parser('remove', help='Remove a holding (data correction, no transaction logged)')
     p_rem.add_argument('ticker', type=str)
+    p_rem.set_defaults(func=cmd_remove)
 
     p_sav = sub.add_parser('savings', help='Manage savings accounts')
     sav_sub = p_sav.add_subparsers(dest='savings_command', metavar='SUBCOMMAND')
@@ -397,11 +406,14 @@ def _build_parser() -> argparse.ArgumentParser:
                            help='Annual percentage yield, e.g. 4.0 for 4%% (required when creating)')
     p_sav_set.add_argument('--bank', type=str,   default=None,
                            help='Institution name shown in the morning brief, e.g. "Amex"')
+    p_sav_set.set_defaults(func=cmd_savings_set)
 
     p_sav_rem = sav_sub.add_parser('remove', help='Remove a savings account')
     p_sav_rem.add_argument('name', type=str, help='Account name to remove')
+    p_sav_rem.set_defaults(func=cmd_savings_remove)
 
-    sav_sub.add_parser('interest', help='Show accrued interest and next payment projections')
+    sav_sub.add_parser('interest', help='Show accrued interest and next payment projections'
+                       ).set_defaults(func=cmd_savings_interest)
 
     p_goal = sub.add_parser('goal', help='Set or view portfolio and savings goals')
     goal_sub = p_goal.add_subparsers(dest='goal_command', metavar='SUBCOMMAND')
@@ -411,30 +423,23 @@ def _build_parser() -> argparse.ArgumentParser:
     p_goal_set.add_argument('target', choices=['portfolio', 'savings'],
                             help='"portfolio" or "savings"')
     p_goal_set.add_argument('amount', type=float, help='Target dollar amount')
+    p_goal_set.set_defaults(func=cmd_goal_set)
 
     p_goal_rem = goal_sub.add_parser('remove', help='Remove a goal')
     p_goal_rem.add_argument('target', choices=['portfolio', 'savings'])
+    p_goal_rem.set_defaults(func=cmd_goal_remove)
 
-    goal_sub.add_parser('show', help='Show current goals')
+    goal_sub.add_parser('show', help='Show current goals'
+                        ).set_defaults(func=cmd_goal_show)
 
     return parser
 
 
 def main() -> None:
-    parser = _build_parser()
-    args   = parser.parse_args()
+    args = _build_parser().parse_args()
     if hasattr(args, 'ticker') and args.ticker:
         args.ticker = args.ticker.upper()
-    {
-        'buy':     cmd_buy,
-        'sell':    cmd_sell,
-        'show':    cmd_show,
-        'gains':   cmd_gains,
-        'history': cmd_history,
-        'remove':  cmd_remove,
-        'savings': cmd_savings,
-        'goal':    cmd_goal,
-    }[args.command](args)
+    args.func(args)
 
 
 if __name__ == '__main__':

@@ -41,6 +41,8 @@ ENV/
 holdings.json
 transactions.json
 savings.json
+goals.json
+watchlist_descriptions_cache.json
 
 # Generated output — lives in ~/.portfolio/, not in the repo
 portfolio_analysis.png
@@ -51,5 +53,5 @@ portfolio_analysis.png
 # Personal config overrides — never commit your watchlist/picks
 config_local.py
 
-# Claude Code project instructions
+# Local AI assistant instructions (kept private; ARCHITECTURE.md is the public version)
 CLAUDE.md

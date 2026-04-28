@@ -14,6 +14,7 @@ from pathlib import Path
 
 from config import DATA_DIR, GOALS_FILE, HOLDINGS_FILE, INTEREST_PAYMENT_DAY, MOMENTUM_FLAT_BAND, SAVINGS_FILE, WATCHLIST
 from ledger import _payment_dates, accrued_interest, projected_next_payment, load_goals, load_holdings, load_savings
+from metrics import momentum_signal
 from prices import fetch_prices_batch, fetch_prices_with_change, fetch_watchlist_history, fetch_watchlist_info
 
 OUT_FILE     = DATA_DIR / "dashboard.html"
@@ -22,26 +23,19 @@ ANALYSIS_PNG = DATA_DIR / "portfolio_analysis.png"
 
 
 def _compute_signal(history: dict, flat_band: float) -> dict:
-    """Three-horizon momentum signal mirroring morning_brief.py logic."""
-    prices_1m = history.get('1M', [])
-    prices_1w = history.get('1W', [])
+    """
+    Reconstructs the three horizon returns from cached price arrays, then
+    delegates to the shared classifier in metrics.py. Dashboard has no
+    daily-resolution feed, so 1D is approximated by the last two 1W closes.
+    """
+    p1m = history.get('1M', [])
+    p1w = history.get('1W', [])
 
     def pct_ret(p):
-        if len(p) < 2 or p[0] == 0:
-            return None
-        return (p[-1] - p[0]) / p[0]
+        return (p[-1] - p[0]) / p[0] if len(p) >= 2 and p[0] else float('nan')
 
-    r1d = pct_ret(prices_1w[-2:]) if len(prices_1w) >= 2 else None
-    r1w = pct_ret(prices_1w)
-    r1m = pct_ret(prices_1m)
-
-    if None in (r1d, r1w, r1m):
-        return {"type": "NEUTRAL", "reason": "insufficient data"}
-    if r1m < -flat_band:
-        return {"type": "BEARISH", "reason": "bounce in downtrend" if (r1d > 0 or r1w > 0) else "downtrend"}
-    if r1m > flat_band:
-        return {"type": "BULLISH", "reason": "dip in uptrend" if (r1d < 0 or r1w < 0) else "strong momentum"}
-    return {"type": "NEUTRAL", "reason": "mixed signals"}
+    sig, reason = momentum_signal(pct_ret(p1w[-2:]), pct_ret(p1w), pct_ret(p1m), flat_band)
+    return {"type": sig, "reason": reason}
 
 
 def _build_holdings_data(

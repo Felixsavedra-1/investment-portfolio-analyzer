@@ -8,6 +8,37 @@ Terminal portfolio tracker. Trades, P&L, daily brief, interactive dashboard — 
 
 ---
 
+## Why
+
+Every consumer brokerage app shows you the same thing: balance, day change, a chart. None of them show **alpha vs. a benchmark, Sharpe with a confidence interval, max drawdown, or accrued interest on idle cash**. Vero is the dashboard I wanted as an operator: one command in the morning, the numbers that actually matter, no login, no tracking, no SaaS.
+
+It's also a deliberate exercise in clean architecture — pure formatting layer, single network surface, atomic writes, dataclasses, network-free tests. ~3,800 LoC, no framework.
+
+---
+
+## Architecture
+
+```
+                ┌─────────────────┐  ┌─────────────────┐
+   CLI entry →  │  portfolio.py   │  │ morning_brief.py│  → terminal + dashboard
+                │  (router)       │  │ (snapshot)      │
+                └────────┬────────┘  └────────┬────────┘
+                         │                    │
+              ┌──────────┼────────────────────┼──────────┐
+              ▼          ▼                    ▼          ▼
+        ┌─────────┐ ┌──────────┐ ┌──────────┐ ┌─────────────┐
+        │ledger.py│ │display.py│ │metrics.py│ │  prices.py  │
+        │ data    │ │ pure     │ │ Sharpe,  │ │ yfinance    │
+        │ + JSON  │ │ format   │ │ DD, etc. │ │ (only here) │
+        └─────────┘ └──────────┘ └──────────┘ └─────────────┘
+```
+
+`prices.py` is the only module that touches the network. `display.py` is pure (no I/O, no globals). `ledger.py` does atomic `.tmp → rename` writes. Tests are network-free by design.
+
+> Full architecture notes, data model, and design rationale: [ARCHITECTURE.md](ARCHITECTURE.md).
+
+---
+
 ## Install
 
 Requires Python 3.9+
@@ -103,8 +134,8 @@ Risk snapshot  (trailing 1 year)
 
 ```bash
 # Trades
-portfolio buy   TICKER DOLLARS [--price P] [--notes "..."]
-portfolio sell  TICKER DOLLARS [--price P]
+portfolio buy   TICKER DOLLARS [--date YYYY-MM-DD] [--price P] [--notes "..."]
+portfolio sell  TICKER DOLLARS [--date YYYY-MM-DD] [--price P]
 portfolio show
 portfolio gains [--ticker TICKER]
 portfolio history [--ticker TICKER] [--limit N]
@@ -113,12 +144,15 @@ portfolio remove TICKER
 # Savings
 portfolio savings set    NAME BALANCE [--apy RATE] [--bank NAME]
 portfolio savings remove NAME
+portfolio savings interest                # accrued + projected next payment
 
 # Goals
 portfolio goal set portfolio|savings AMOUNT
 portfolio goal remove portfolio|savings
 portfolio goal show
 ```
+
+`--date` backfills a trade at that day's closing price (weekends/holidays resolve to the prior trading day).
 
 ---
 

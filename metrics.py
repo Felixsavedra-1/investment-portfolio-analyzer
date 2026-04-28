@@ -2,7 +2,6 @@
 metrics.py — Shared financial metric calculations.
 """
 
-import collections
 import numpy as np
 import pandas as pd
 from scipy import stats
@@ -38,81 +37,28 @@ def max_drawdown(cumulative_returns: pd.Series) -> float:
     return float(((cumulative_returns - running_max) / running_max).min())
 
 
-def time_weighted_return(transactions: list, prices_df: pd.DataFrame) -> float:
+def momentum_signal(
+    r1d: float,
+    r1w: float,
+    r1m: float,
+    flat_band: float,
+) -> tuple:
     """
-    TWRR: geometrically links sub-period returns at each cash-flow event,
-    eliminating timing effects to isolate selection skill. Returns NaN if
-    data is insufficient.
+    Three-horizon momentum classifier. Single source of truth — both the morning
+    brief and the dashboard call this.
+
+    1M sets the trend; 1D/1W qualify it. NaN inputs ⇒ NEUTRAL.
+        BULLISH  · 1M > +band            ('strong momentum' or 'dip in uptrend')
+        BEARISH  · 1M < -band            ('downtrend' or 'bounce in downtrend')
+        NEUTRAL  · |1M| ≤ band, or any input is NaN
     """
-    known = set(prices_df.columns)
-    relevant = [t for t in transactions if t.ticker in known]
-    if not relevant:
-        return float('nan')
-
-    def price_at(ticker: str, date_str: str) -> float:
-        col = prices_df.get(ticker)
-        if col is None:
-            return float('nan')
-        s = col.dropna()
-        mask = s.index.strftime('%Y-%m-%d') <= date_str
-        if not mask.any():
-            return float('nan')
-        return float(s[mask].iloc[-1])
-
-    def portfolio_value(holdings: dict, date_str: str) -> float:
-        if not holdings:
-            return 0.0
-        total = 0.0
-        for ticker, shares in holdings.items():
-            p = price_at(ticker, date_str)
-            if not np.isfinite(p):
-                return float('nan')
-            total += shares * p
-        return total
-
-    sorted_txns = sorted(relevant, key=lambda t: t.timestamp[:10])
-    txns_by_date: dict = collections.defaultdict(list)
-    for t in sorted_txns:
-        txns_by_date[t.timestamp[:10]].append(t)
-
-    holdings: dict = {}
-    factors: list  = []
-    prev_date: str | None = None
-
-    for date_str in sorted(txns_by_date):
-        if prev_date is not None and holdings:
-            v_start = portfolio_value(holdings, prev_date)
-            v_end   = portfolio_value(holdings, date_str)
-            if v_start > 0 and np.isfinite(v_start) and np.isfinite(v_end):
-                factors.append(v_end / v_start)
-
-        for txn in txns_by_date[date_str]:
-            if txn.action == 'buy':
-                holdings[txn.ticker] = holdings.get(txn.ticker, 0.0) + txn.shares
-            elif txn.action == 'sell':
-                remaining = holdings.get(txn.ticker, 0.0) - txn.shares
-                if remaining <= 1e-9:
-                    holdings.pop(txn.ticker, None)
-                else:
-                    holdings[txn.ticker] = remaining
-        prev_date = date_str
-
-    # Final sub-period: last cash-flow date → most recent price date
-    if holdings and prev_date is not None:
-        latest = prices_df.index[-1].strftime('%Y-%m-%d')
-        if latest > prev_date:
-            v_start = portfolio_value(holdings, prev_date)
-            v_end   = portfolio_value(holdings, latest)
-            if v_start > 0 and np.isfinite(v_start) and np.isfinite(v_end):
-                factors.append(v_end / v_start)
-
-    if not factors:
-        return float('nan')
-
-    twrr = 1.0
-    for f in factors:
-        twrr *= f
-    return twrr - 1.0
+    if not all(np.isfinite(v) for v in (r1d, r1w, r1m)):
+        return 'NEUTRAL', 'insufficient data'
+    if r1m < -flat_band:
+        return 'BEARISH', 'bounce in downtrend' if (r1d > 0 or r1w > 0) else 'downtrend'
+    if r1m > flat_band:
+        return 'BULLISH', 'dip in uptrend' if (r1d < 0 or r1w < 0) else 'strong momentum'
+    return 'NEUTRAL', 'mixed signals'
 
 
 def risk_snapshot(

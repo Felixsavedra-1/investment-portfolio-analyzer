@@ -1,7 +1,7 @@
 """metrics.py — Shared financial metric calculations."""
 
 import math
-from typing import Any, TypedDict
+from typing import TypedDict
 
 import numpy as np
 import pandas as pd

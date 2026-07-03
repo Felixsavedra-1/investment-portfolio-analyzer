@@ -197,13 +197,17 @@ def render_gains(
 
     has_prices = total_value > 0
 
+    combined_str = (
+        _signed_dollar(total_realized + total_unrealized) if has_prices
+        else _signed_dollar(total_realized) + ' (+ unrealized n/a)'
+    )
     lines += [
         '',
         'SUMMARY',
         _divider(_WIDTH_GAINS),
         f'  Realized:    {_signed_dollar(total_realized)}',
         f'  Unrealized:  {_signed_dollar(total_unrealized) if has_prices else "n/a"}',
-        f'  Combined:    {_signed_dollar(total_realized + total_unrealized) if has_prices else _signed_dollar(total_realized) + " (+ unrealized n/a)"}',
+        f'  Combined:    {combined_str}',
         '',
     ]
     return '\n'.join(lines)

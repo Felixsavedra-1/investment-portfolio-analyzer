@@ -38,21 +38,17 @@ MOMENTUM_FLAT_BAND: float = 0.01
 # Minimum trading-day history required to show the Risk Snapshot (~3 months).
 RISK_MIN_OBSERVATIONS: int = 60
 
-# Timezone for the brief header and data-freshness labels.
 BRIEF_TIMEZONE: str = 'America/New_York'
 
 # Prices are in each index's local currency.
 GLOBAL_INDICES: dict[str, str] = {
-    # Americas
     'S&P 500    (US)':        '^GSPC',
     'TSX        (Canada)':    '^GSPTSE',
     'Bolsa IPC  (Mexico)':    '^MXX',
     'Bovespa    (Brazil)':    '^BVSP',
-    # Europe
     'FTSE 100   (UK)':        '^FTSE',
     'CAC 40     (France)':    '^FCHI',
     'DAX        (Germany)':   '^GDAXI',
-    # Asia-Pacific
     'Nikkei 225 (Japan)':     '^N225',
     'KOSPI      (Korea)':     '^KS11',
     'Shanghai   (China)':     '000001.SS',

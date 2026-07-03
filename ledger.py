@@ -157,6 +157,10 @@ class SavingsAccount:
     def monthly_interest(self) -> float:
         return self.balance * self.apy / 12
 
+    @property
+    def daily_interest(self) -> float:
+        return self.balance * self.apy / 365
+
 
 def load_savings(path: Path) -> list[SavingsAccount]:
     if not path.exists():

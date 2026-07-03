@@ -39,8 +39,6 @@ from ledger import (
 from metrics import RiskSnapshot, cost_basis_weights, momentum_signal, risk_snapshot as _compute_risk_snapshot
 from prices import yf_warnings
 
-logger = logging.getLogger(__name__)
-
 ET = ZoneInfo(BRIEF_TIMEZONE)
 
 _GREEN  = '\033[38;2;0;213;111m'

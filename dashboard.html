@@ -40,7 +40,6 @@ html, body {
   font-variant-numeric: tabular-nums;
 }
 
-/* ── Neo-grid overlay ───────────────────────────────────────────────────── */
 body::before {
   content: ''; position: fixed; inset: 0;
   pointer-events: none; z-index: 1;
@@ -50,7 +49,6 @@ body::before {
   background-size: 48px 48px;
 }
 
-/* ── Scanlines ──────────────────────────────────────────────────────────── */
 body::after {
   content: ''; position: fixed; inset: 0;
   pointer-events: none; z-index: 9999;
@@ -60,7 +58,6 @@ body::after {
   );
 }
 
-/* ── Header ─────────────────────────────────────────────────────────────── */
 #header {
   position: sticky; top: 0; z-index: 100;
   display: flex; align-items: center; gap: 20px;
@@ -137,7 +134,6 @@ body::after {
 #header-staleness.stale { color: var(--gold); }
 #header-staleness.old   { color: var(--orange); }
 
-/* ── Main grid ──────────────────────────────────────────────────────────── */
 #main {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -146,7 +142,6 @@ body::after {
   min-height: calc(100vh - 50px);
 }
 
-/* ── Panel ──────────────────────────────────────────────────────────────── */
 .panel {
   background: var(--bg);
   padding: 32px 32px 40px;
@@ -178,7 +173,6 @@ body::after {
   text-shadow: 0 0 18px rgba(88,81,69,0.65), 0 0 40px rgba(88,81,69,0.2);
 }
 
-/* ── 3D chart container ─────────────────────────────────────────────────── */
 .chart-container {
   position: relative;
   width: 100%; max-width: 300px;
@@ -193,7 +187,6 @@ body::after {
   pointer-events: none; text-align: center;
 }
 
-/* ── Progress bar ───────────────────────────────────────────────────────── */
 .progress-wrap { display: flex; flex-direction: column; gap: 7px; }
 
 .progress-meta {
@@ -246,7 +239,6 @@ body::after {
   letter-spacing: 0.04em; line-height: 1.6; padding: 2px 0;
 }
 
-/* ── Data table ─────────────────────────────────────────────────────────── */
 .table-label {
   font-size: 12px; letter-spacing: 0.22em;
   color: var(--dim); text-transform: uppercase;
@@ -278,7 +270,6 @@ body::after {
 .dr-sub.pos { color: var(--tan); }
 .dr-sub.neg { color: var(--neg); }
 
-/* ── Label color picker ─────────────────────────────────────────────────── */
 .color-picker {
   display: flex; gap: 3px; align-items: center; flex-shrink: 0;
   opacity: 0; pointer-events: none; transition: opacity 0.2s;
@@ -293,7 +284,6 @@ body::after {
 .color-swatch:hover { transform: scale(1.5); }
 .color-swatch.active { outline-color: rgba(255,255,255,0.55); }
 
-/* ── Holding metrics bar ────────────────────────────────────────────────── */
 .holding-metrics {
   display: flex; gap: 18px; flex-wrap: wrap;
   padding: 2px 0 10px 0; border-bottom: 1px solid var(--border);
@@ -306,7 +296,6 @@ body::after {
 .hm-pos   { color: var(--tan); }
 .hm-neg   { color: var(--neg); }
 
-/* ── Watchlist ──────────────────────────────────────────────────────────── */
 .wl-tf-bar { display: flex; gap: 5px; align-items: center; margin-left: auto; }
 .wl-tf {
   background: none; border: 1px solid var(--border); color: var(--dim);
@@ -349,7 +338,6 @@ body::after {
 }
 .wl-empty { font-size: 13px; color: var(--dim); letter-spacing: 0.10em; padding: 28px 0; text-align: center; }
 
-/* ── Watchlist tooltip ──────────────────────────────────────────────────── */
 #wl-tooltip {
   position: fixed;
   pointer-events: none;
@@ -380,7 +368,6 @@ body::after {
 .wl-name { cursor: pointer; }
 .wl-name.active-analysis { color: #4C0701; }
 
-/* ── Analysis panel content ─────────────────────────────────────────────── */
 .an-empty  { font-size: 13px; color: var(--dim); letter-spacing: 0.10em; padding: 28px 0; text-align: center; }
 .an-header { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; margin-bottom: 22px; }
 .an-ticker { font-size: 22px; color: var(--tan); letter-spacing: 0.12em; font-weight: bold; }
@@ -399,7 +386,6 @@ body::after {
 .an-m-neu   { color: var(--dim); }
 .an-desc    { font-size: 13px; color: var(--dim); letter-spacing: 0.01em; line-height: 1.7; border-top: 1px solid var(--border); padding-top: 20px; margin-top: 22px; max-width: 78ch; }
 
-/* ── Claude deep analysis block ─────────────────────────────────────────── */
 .an-claude       { margin-top: 26px; border-top: 1px solid var(--border); padding-top: 20px; }
 .an-claude-head  { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 16px; }
 .an-claude-title { font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--tan); }
@@ -414,12 +400,10 @@ body::after {
 .an-c-bear       { border-left-color: var(--neg); }
 .an-c-watch      { border-left-color: var(--gold); }
 
-/* ── Scrollbar ──────────────────────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 3px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--dim); border-radius: 2px; }
 
-/* ── Reduced motion ─────────────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.001ms !important;
@@ -451,7 +435,6 @@ body::after {
 
   <main id="main">
 
-    <!-- Savings panel (LEFT) -->
     <section class="panel">
       <div class="panel-header">
         <span class="panel-label">SAVINGS</span>
@@ -468,7 +451,6 @@ body::after {
       </div>
     </section>
 
-    <!-- Portfolio panel (RIGHT) -->
     <section class="panel">
       <div class="panel-header">
         <span class="panel-label">PORTFOLIO</span>
@@ -485,7 +467,6 @@ body::after {
       </div>
     </section>
 
-    <!-- Analysis panel (full width) -->
     <section class="panel panel--full" id="analysis-panel">
       <div class="panel-header">
         <span class="panel-label">DEEP ANALYSIS</span>
@@ -495,7 +476,6 @@ body::after {
       <div id="analysis-content"></div>
     </section>
 
-    <!-- Watchlist panel (full width) -->
     <section class="panel panel--full" id="watchlist-panel">
       <div class="panel-header">
         <span class="panel-label">WATCHLIST</span>
@@ -564,7 +544,6 @@ function typeWriter(el, text, msPer, cb) {
   }, msPer);
 }
 
-// ── Arc Reactor ring chart ───────────────────────────────────────────────────
 function build3DRing(containerId, labels, values, totalValue, colors) {
   const container = document.getElementById(containerId);
   if (!container) return;
@@ -593,7 +572,7 @@ function build3DRing(containerId, labels, values, totalValue, colors) {
   renderer.toneMappingExposure = 1.0;
   container.appendChild(renderer.domElement);
 
-  // ── Ring A — Holdings allocation (outermost) ───────────────────────────────
+  // Ring A — Holdings allocation (outermost)
   const A_OUT = 1.56, A_IN = 1.20, A_DEPTH = 0.20, GAP = 0.10;
   const MID_R = (A_OUT + A_IN) / 2;
   const total  = values.reduce((a, b) => a + b, 0) || 1;
@@ -607,8 +586,6 @@ function build3DRing(containerId, labels, values, totalValue, colors) {
     const sliceAng = Math.max(rawAng - GAP, 0.01);
     const hexColor = (colors && colors[i]) || SLICE_COLORS[i % SLICE_COLORS.length];
     const color    = new THREE.Color(hexColor);
-    // Emissive uses the slice color boosted to a minimum luminance so even
-    // very dark palette entries (#0f2d23, #324155) glow visibly.
     // Boost emissive so even the darkest palette entries glow visibly.
     // Target minimum luminance 0.30; cap boost at 4× to preserve hue identity.
     const emissive = color.clone();
@@ -635,7 +612,7 @@ function build3DRing(containerId, labels, values, totalValue, colors) {
   groupA.position.z = -A_DEPTH / 2;
   scene.add(groupA);
 
-  // ── Ring D — Outer precision bezel ────────────────────────────────────────
+  // Ring D — Outer precision bezel
   const bezGeo = new THREE.TorusGeometry(1.72, 0.024, 16, 120);
   const bezMat = new THREE.MeshStandardMaterial({
     color: 0x3a3a3a, emissive: 0x1a1a1a, emissiveIntensity: 0.4,
@@ -643,7 +620,7 @@ function build3DRing(containerId, labels, values, totalValue, colors) {
   });
   scene.add(new THREE.Mesh(bezGeo, bezMat));
 
-  // ── Inner-edge trim torus ─────────────────────────────────────────────────
+  // Inner-edge trim torus
   const trimGeo = new THREE.TorusGeometry(1.29, 0.016, 16, 120);
   const trimMat = new THREE.MeshStandardMaterial({
     color: 0x2a2a2a, emissive: 0x4C0701, emissiveIntensity: 0.25,
@@ -651,7 +628,7 @@ function build3DRing(containerId, labels, values, totalValue, colors) {
   });
   scene.add(new THREE.Mesh(trimGeo, trimMat));
 
-  // ── Ring B — Precision tick ring (middle, counter-rotates) ────────────────
+  // Ring B — Precision tick ring (middle, counter-rotates)
   const B_OUT = 1.10, B_IN = 0.95, B_DEPTH = 0.12;
   const groupB  = new THREE.Group();
   const N_TICKS = 48;
@@ -677,7 +654,7 @@ function build3DRing(containerId, labels, values, totalValue, colors) {
   groupB.position.z = -B_DEPTH / 2;
   scene.add(groupB);
 
-  // ── Ring C — Inner chamber (fast rotation) ────────────────────────────────
+  // Ring C — Inner chamber (fast rotation)
   const C_OUT = 0.55, C_IN = 0.35, C_DEPTH = 0.14;
   const groupC   = new THREE.Group();
   const N_INNER  = 12;
@@ -699,7 +676,6 @@ function build3DRing(containerId, labels, values, totalValue, colors) {
   groupC.position.z = -C_DEPTH / 2;
   scene.add(groupC);
 
-  // ── Three-layer core ──────────────────────────────────────────────────────
   const coreInnerMesh = new THREE.Mesh(
     new THREE.SphereGeometry(0.13, 32, 32),
     new THREE.MeshStandardMaterial({
@@ -723,7 +699,6 @@ function build3DRing(containerId, labels, values, totalValue, colors) {
   const coreHalo = new THREE.Mesh(new THREE.SphereGeometry(0.38, 32, 32), coreHaloMat);
   scene.add(coreHalo);
 
-  // ── Lighting ──────────────────────────────────────────────────────────────
   scene.add(new THREE.AmbientLight(0x050a12, 2.5));
   const fL = new THREE.PointLight(0x4C0701, 2.0, 18);
   fL.position.set(2, 3, 4);
@@ -741,7 +716,6 @@ function build3DRing(containerId, labels, values, totalValue, colors) {
   const hoverLight = new THREE.PointLight(0x4C0701, 0, 8);
   scene.add(hoverLight);
 
-  // ── Particle system ───────────────────────────────────────────────────────
   const PCOUNT = 55;
   const pPos   = new Float32Array(PCOUNT * 3);
   const pVel   = Array.from({ length: PCOUNT }, () => new THREE.Vector3());
@@ -784,7 +758,6 @@ function build3DRing(containerId, labels, values, totalValue, colors) {
     pLife[i] = 0.5 + Math.random() * 0.5;
   }
 
-  // ── Hover + tooltip ───────────────────────────────────────────────────────
   let hoverTarget   = null;
   let particleAlpha = 0;
 
@@ -797,7 +770,6 @@ function build3DRing(containerId, labels, values, totalValue, colors) {
     "z-index:10;white-space:nowrap;";
   container.appendChild(tip);
 
-  // ── Center DOM overlay ────────────────────────────────────────────────────
   const centerEl = document.createElement('div');
   centerEl.className = 'chart-center';
   centerEl.innerHTML =
@@ -846,7 +818,6 @@ function build3DRing(containerId, labels, values, totalValue, colors) {
     hoverTarget = null;
   });
 
-  // ── Animation loop ────────────────────────────────────────────────────────
   let clock = 0, lastTs = 0;
   (function loop(now) {
     requestAnimationFrame(loop);
@@ -926,7 +897,6 @@ function build3DRing(containerId, labels, values, totalValue, colors) {
   return meshesA;
 }
 
-// ── Progress bar ────────────────────────────────────────────────────────────
 function renderProgressBar(containerId, current, goal, type) {
   const el = document.getElementById(containerId);
   if (!el) return;
@@ -952,7 +922,7 @@ function renderProgressBar(containerId, current, goal, type) {
     </div>`;
 }
 
-// ── Label color palette (user-selectable, 1–6) ───────────────────────────────
+// Label color palette (user-selectable, 1–6)
 const LABEL_COLORS = [
   '#d8d0c8', // 1 Bone White
   '#a03828', // 2 Oxide Red
@@ -967,7 +937,6 @@ function swatchesHtml(activeColor) {
   ).join('')}</div>`;
 }
 
-// ── Holdings table ───────────────────────────────────────────────────────────
 function renderHoldings() {
   const el       = document.getElementById('holdings-list');
   const holdings = D.holdings || [];
@@ -1001,7 +970,6 @@ function renderHoldings() {
   }).join('');
 }
 
-// ── Savings table ────────────────────────────────────────────────────────────
 function renderSavings() {
   const el      = document.getElementById('savings-list');
   const savings = D.savings || [];
@@ -1031,7 +999,6 @@ function renderSavings() {
   }).join('');
 }
 
-// ── Digit flicker ────────────────────────────────────────────────────────────
 function scheduleFlicker(el) {
   if (REDUCED) return;
   const delay = 8000 + Math.random() * 8000;
@@ -1041,7 +1008,6 @@ function scheduleFlicker(el) {
   }, delay);
 }
 
-// ── Header equity visual (VR-02) ─────────────────────────────────────────────
 // Ported from the Vedra Research portfolio site (drawEquity scene), recolored to
 // the dashboard's rust palette. Self-contained so it can't collide with the 3D loops.
 (function(){
@@ -1099,7 +1065,6 @@ function scheduleFlicker(el) {
   })();
 })();
 
-// ── Header ───────────────────────────────────────────────────────────────────
 function renderHeader() {
   typeWriter(document.getElementById('header-title'), 'VERO', 14);
 
@@ -1136,7 +1101,6 @@ function renderHeader() {
   setInterval(tickTime, 60000);
 }
 
-// ── Sparklines ───────────────────────────────────────────────────────────────
 const WL_W = 220, WL_H = 48;
 
 function drawSparkline(canvas, prices, w, h) {
@@ -1213,7 +1177,6 @@ function drawSparkline(canvas, prices, w, h) {
   requestAnimationFrame(drawFrame);
 }
 
-// ── Watchlist ────────────────────────────────────────────────────────────────
 let activeTF = '1W';
 const SIGNAL_ICON = { BULLISH: '▲', BEARISH: '▼', NEUTRAL: '~' };
 
@@ -1248,7 +1211,6 @@ function renderWatchlist() {
   drawAllSparklines();
 }
 
-// ── Analysis panel ──────────────────────────────────────────────────────────
 let activeAnalysisTicker = null;
 let activeAnalysisTF     = 'YTD';
 
@@ -1428,7 +1390,6 @@ function clearAnalysisPanel() {
     '<div class="an-empty">Click a company in the watchlist to view analysis.</div>';
 }
 
-// ── Boot ─────────────────────────────────────────────────────────────────────
 (function init() {
   renderHeader();
 
@@ -1473,7 +1434,6 @@ function clearAnalysisPanel() {
   renderSavings();
   renderWatchlist();
 
-  // ── COLORS button toggle ─────────────────────────────────────────────────
   ['holdings', 'savings'].forEach(type => {
     const btn  = document.getElementById(`${type}-legend-btn`);
     const list = document.getElementById(`${type}-list`);
@@ -1483,7 +1443,6 @@ function clearAnalysisPanel() {
     });
   });
 
-  // ── Label color picker clicks ────────────────────────────────────────────
   ['holdings-list', 'savings-list'].forEach(id => {
     document.getElementById(id).addEventListener('click', e => {
       const sw = e.target.closest('.color-swatch');
@@ -1517,7 +1476,6 @@ function clearAnalysisPanel() {
   });
   clearAnalysisPanel();
 
-  // ── Watchlist company click → analysis ──────────────────────────────────
   document.getElementById('watchlist-rows').addEventListener('click', e => {
     const nameEl = e.target.closest('.wl-name');
     if (!nameEl) return;
@@ -1532,7 +1490,6 @@ function clearAnalysisPanel() {
     document.getElementById('analysis-panel').scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
 
-  // ── Analysis TF buttons ──────────────────────────────────────────────────
   document.getElementById('analysis-panel').addEventListener('click', e => {
     const btn = e.target.closest('[data-an-tf]');
     if (!btn) return;
@@ -1545,7 +1502,6 @@ function clearAnalysisPanel() {
     _drawAnalysisChart((w.history || {})[activeAnalysisTF] || []);
   });
 
-  // ── Watchlist company tooltip ───────────────────────────────────────────
   const wlTip     = document.getElementById('wl-tooltip');
   const ttSector  = document.getElementById('tt-sector');
   const ttDesc    = document.getElementById('tt-desc');

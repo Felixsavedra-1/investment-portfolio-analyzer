@@ -43,7 +43,6 @@ def _build_holdings_data(
     prev_prices: dict[str, float],
     holding_history: dict[str, dict[str, list[float]]] | None = None,
 ) -> tuple[list[dict[str, object]], float, float]:
-    """Compute per-holding rows with gain, day-change, and 1M sparkline data."""
     rows = []
     portfolio_value = 0.0
     total_cost = 0.0
@@ -85,7 +84,6 @@ def _build_holdings_data(
 
 
 def _build_savings_data(savings_acc: list, today_d: date) -> tuple[list[dict], float, float]:
-    """Compute per-account rows with accrual and next-payment projections."""
     rows = []
     savings_total = 0.0
     total_accrued = 0.0
@@ -101,7 +99,7 @@ def _build_savings_data(savings_acc: list, today_d: date) -> tuple[list[dict], f
         if INTEREST_PAYMENT_DAY:
             acc_interest  = accrued_interest(acc, INTEREST_PAYMENT_DAY, today_d)
             proj_payment  = projected_next_payment(acc, INTEREST_PAYMENT_DAY, today_d)
-            daily_earn    = acc.balance * acc.apy / 365  # simple daily rate, not compound
+            daily_earn    = acc.daily_interest
             total_accrued += acc_interest
         rows.append({
             "name":               acc.name,
@@ -117,7 +115,6 @@ def _build_savings_data(savings_acc: list, today_d: date) -> tuple[list[dict], f
 
 
 def _build_watchlist_data() -> list[dict]:
-    """Fetch prices, signals, and descriptions for all watchlist tickers."""
     if not WATCHLIST:
         return []
     wl_tickers  = list(WATCHLIST.keys())
@@ -148,7 +145,6 @@ def build_payload(
     prices: dict[str, float] | None = None,
     prev_prices: dict[str, float] | None = None,
 ) -> dict[str, object]:
-    """Assemble the full dashboard data payload from holdings, savings, and watchlist."""
     holdings    = load_holdings(HOLDINGS_FILE)
     savings_acc = load_savings(SAVINGS_FILE)
     goals       = load_goals(GOALS_FILE)

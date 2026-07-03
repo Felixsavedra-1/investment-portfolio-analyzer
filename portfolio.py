@@ -45,22 +45,54 @@ def _parse_date(date_str: str) -> str:
 def _resolve_price(ticker: str, explicit: float | None, date_str: str | None = None) -> float:
     if explicit is not None:
         return explicit
-    if date_str is not None:
-        price = fetch_historical_price(ticker, date_str)
-        print(f'  Fetched {ticker} price for {date_str}: ${price:,.2f}')
-        return price
-    price = fetch_price(ticker)
-    print(f'  Fetched price for {ticker}: ${price:,.2f}')
+    try:
+        if date_str is not None:
+            price = fetch_historical_price(ticker, date_str)
+            print(f'  Fetched {ticker} price for {date_str}: ${price:,.2f}')
+        else:
+            price = fetch_price(ticker)
+            print(f'  Fetched price for {ticker}: ${price:,.2f}')
+    except PriceFetchError as e:
+        sys.exit(str(e))
     return price
+
+
+def _require_positive(dollars: float) -> None:
+    if dollars <= 0:
+        sys.exit('Amount must be positive.')
+
+
+def _record_trade(
+    ticker: str,
+    timestamp: str,
+    action: str,
+    shares: float,
+    dollars: float,
+    price: float,
+    realized_pnl: float | None,
+    notes: str,
+) -> None:
+    append_transaction(
+        Transaction(
+            id=_make_id(timestamp, ticker),
+            timestamp=timestamp,
+            action=action,
+            ticker=ticker,
+            shares=shares,
+            dollars=dollars,
+            price=price,
+            realized_pnl=realized_pnl,
+            notes=notes,
+        ),
+        TRANSACTIONS_FILE,
+    )
 
 
 def cmd_buy(args: argparse.Namespace, prompt: Callable[[str], str] = input) -> None:
     ticker   = args.ticker
     dollars  = args.dollars
     date_str = _parse_date(args.date) if args.date else None
-
-    if dollars <= 0:
-        sys.exit('Amount must be positive.')
+    _require_positive(dollars)
 
     holdings = load_holdings(HOLDINGS_FILE)
     is_new   = ticker not in holdings
@@ -76,11 +108,7 @@ def cmd_buy(args: argparse.Namespace, prompt: Callable[[str], str] = input) -> N
             print('  Cancelled.\n')
             return
 
-    try:
-        price = _resolve_price(ticker, args.price, date_str)
-    except PriceFetchError as e:
-        sys.exit(str(e))
-
+    price     = _resolve_price(ticker, args.price, date_str)
     shares    = round(dollars / price, SHARE_DECIMALS)
     timestamp = _trade_ts(date_str)
 
@@ -93,20 +121,7 @@ def cmd_buy(args: argparse.Namespace, prompt: Callable[[str], str] = input) -> N
         h.cost   += dollars
 
     save_holdings(holdings, HOLDINGS_FILE)
-    append_transaction(
-        Transaction(
-            id=_make_id(timestamp, ticker),
-            timestamp=timestamp,
-            action='buy',
-            ticker=ticker,
-            shares=shares,
-            dollars=dollars,
-            price=price,
-            realized_pnl=None,
-            notes=args.notes or '',
-        ),
-        TRANSACTIONS_FILE,
-    )
+    _record_trade(ticker, timestamp, 'buy', shares, dollars, price, None, args.notes or '')
 
     if is_new:
         print(f'\n  Opened  {ticker}  {shares:.4f} shares @ ${price:,.2f}  |  ${dollars:,.2f} invested\n')
@@ -121,9 +136,7 @@ def cmd_sell(args: argparse.Namespace) -> None:
     ticker   = args.ticker
     dollars  = args.dollars
     date_str = _parse_date(args.date) if args.date else None
-
-    if dollars <= 0:
-        sys.exit('Amount must be positive.')
+    _require_positive(dollars)
 
     holdings = load_holdings(HOLDINGS_FILE)
     if ticker not in holdings:
@@ -133,11 +146,7 @@ def cmd_sell(args: argparse.Namespace) -> None:
     if h.shares <= 0:
         sys.exit(f'{ticker} has no shares to sell.')
 
-    try:
-        price = _resolve_price(ticker, args.price, date_str)
-    except PriceFetchError as e:
-        sys.exit(str(e))
-
+    price  = _resolve_price(ticker, args.price, date_str)
     shares = round(dollars / price, SHARE_DECIMALS)
 
     if shares > h.shares * (1 + EPSILON):
@@ -160,20 +169,7 @@ def cmd_sell(args: argparse.Namespace) -> None:
         status = f'{h.shares:.4f} shares remaining'
 
     save_holdings(holdings, HOLDINGS_FILE)
-    append_transaction(
-        Transaction(
-            id=_make_id(timestamp, ticker),
-            timestamp=timestamp,
-            action='sell',
-            ticker=ticker,
-            shares=shares,
-            dollars=dollars,
-            price=price,
-            realized_pnl=realized_pnl,
-            notes=args.notes or '',
-        ),
-        TRANSACTIONS_FILE,
-    )
+    _record_trade(ticker, timestamp, 'sell', shares, dollars, price, realized_pnl, args.notes or '')
 
     sign = '+' if realized_pnl >= 0 else '-'
     print(
@@ -241,9 +237,12 @@ def cmd_savings_set(args: argparse.Namespace) -> None:
     if args.apy is not None and args.apy < 0:
         sys.exit('APY must be non-negative.')
     if existing:
-        if args.balance is not None: existing.balance = args.balance
-        if args.apy     is not None: existing.apy     = args.apy / 100
-        if args.bank    is not None: existing.bank    = args.bank
+        if args.balance is not None:
+            existing.balance = args.balance
+        if args.apy is not None:
+            existing.apy = args.apy / 100
+        if args.bank is not None:
+            existing.bank = args.bank
         save_savings(accounts, SAVINGS_FILE)
         print(f'\n  Updated  {name}  ${existing.balance:,.2f}  ({existing.apy:.2%} APY)\n')
         return
@@ -290,7 +289,7 @@ def cmd_savings_interest(_args: argparse.Namespace) -> None:
 
     tot_daily = tot_accrued = tot_proj = 0.0
     for a in accounts:
-        daily        = a.balance * a.apy / 365
+        daily        = a.daily_interest
         accrued      = accrued_interest(a, INTEREST_PAYMENT_DAY, today)
         proj         = projected_next_payment(a, INTEREST_PAYMENT_DAY, today)
         tot_daily   += daily

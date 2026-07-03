@@ -150,7 +150,6 @@ PAYLOAD = {
 }
 
 def write_preview_html(disable_animations: bool = False) -> Path:
-    """Inject PAYLOAD into the dashboard template and return the output path."""
     out = build_html(PAYLOAD)
     if disable_animations:
         html = out.read_text()

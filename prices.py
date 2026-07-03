@@ -104,13 +104,11 @@ def _last_close(series: pd.Series, label: str) -> float:
 
 
 def _close_series(data: pd.DataFrame) -> pd.Series:
-    """Extract a single-ticker Close series from a yfinance download."""
     close = data['Close']
     return close.iloc[:, 0] if isinstance(close, pd.DataFrame) else close
 
 
 def _close_frame(data: pd.DataFrame, tickers: list[str]) -> pd.DataFrame:
-    """Normalize a yfinance download to a DataFrame with ticker-named columns."""
     if isinstance(data.columns, pd.MultiIndex):
         close = data['Close']
     else:

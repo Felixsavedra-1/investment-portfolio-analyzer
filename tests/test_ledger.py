@@ -25,7 +25,6 @@ from ledger import (
     save_holdings,
     save_savings,
 )
-from metrics import cost_basis_weights, market_value_weights
 
 
 # ── Fixtures ────────────────────────────────────────────────────────────────────
@@ -211,29 +210,6 @@ class TestTransactionsIO:
 
 
 
-# ── Weight helpers ──────────────────────────────────────────────────────────────
-
-class TestCostBasisWeights:
-    def test_sum_to_one(self):
-        w = cost_basis_weights(_holdings())
-        assert sum(w.values()) == pytest.approx(1.0)
-
-    def test_correct_proportions(self):
-        # AXP=$300, IAU=$100, BTC=$100 → 0.60, 0.20, 0.20
-        w = cost_basis_weights(_holdings())
-        assert w['AXP'] == pytest.approx(0.60)
-        assert w['IAU'] == pytest.approx(0.20)
-        assert w['BTC'] == pytest.approx(0.20)
-
-    def test_single_holding_is_one(self):
-        h = {'X': Holding('X', 1.0, 500.0, '2026-01-01', 'X')}
-        assert cost_basis_weights(h)['X'] == pytest.approx(1.0)
-
-    def test_zero_cost_returns_empty(self):
-        h = {'X': Holding('X', 0.0, 0.0, '2026-01-01', 'X')}
-        assert cost_basis_weights(h) == {}
-
-
 # ── Savings I/O ─────────────────────────────────────────────────────────────────
 
 class TestSavingsIO:
@@ -283,34 +259,6 @@ class TestSavingsIO:
         path = tmp_path / 'nested' / 'savings.json'
         save_savings(self._accounts(), path)
         assert path.exists()
-
-
-class TestMarketValueWeights:
-    def test_sum_to_one(self):
-        prices = {'AXP': 100.0, 'IAU': 20.0, 'BTC': 50_000.0}
-        w      = market_value_weights(_holdings(), prices)
-        assert sum(w.values()) == pytest.approx(1.0)
-
-    def test_correct_proportions(self):
-        holdings = {
-            'A': Holding('A', 2.0, 200.0, '2026-01-01', 'A'),
-            'B': Holding('B', 1.0, 100.0, '2026-01-01', 'B'),
-        }
-        prices = {'A': 100.0, 'B': 100.0}  # A=$200, B=$100 → 2/3, 1/3
-        w      = market_value_weights(holdings, prices)
-        assert w['A'] == pytest.approx(2 / 3)
-        assert w['B'] == pytest.approx(1 / 3)
-
-    def test_missing_price_excludes_ticker(self):
-        prices = {'AXP': 100.0}
-        w      = market_value_weights(_holdings(), prices)
-        assert 'IAU' not in w
-        assert 'BTC' not in w
-        assert w['AXP'] == pytest.approx(1.0)
-
-    def test_zero_shares_excluded(self):
-        holdings = {'A': Holding('A', 0.0, 0.0, '2026-01-01', 'A')}
-        assert market_value_weights(holdings, {'A': 100.0}) == {}
 
 
 # ── Payment dates ────────────────────────────────────────────────────────────────

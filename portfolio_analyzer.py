@@ -32,7 +32,6 @@ _ANNOTATION_MARGIN = 1.2
 
 @dataclass(frozen=True)
 class AssetMetrics:
-    """Risk/return metrics for a single asset, portfolio, or benchmark."""
     annual_return:            float
     annual_return_arithmetic: float
     annual_volatility:        float
@@ -45,7 +44,6 @@ class AssetMetrics:
 
 @dataclass(frozen=True)
 class RollingMetrics:
-    """Rolling-window risk metrics for portfolio + benchmark."""
     window:              int
     portfolio_sharpe:    pd.Series
     benchmark_sharpe:    pd.Series
@@ -67,7 +65,7 @@ class AnalysisResult:
 
 
 def compute_asset_metrics(returns: pd.Series, risk_free_rate: float) -> AssetMetrics:
-    """Compute risk/return for a single return series. Pure."""
+    """Pure — no I/O."""
     returns = returns.dropna()
     if returns.empty:
         raise ValueError("Insufficient return observations to compute metrics.")
@@ -97,7 +95,7 @@ def compute_rolling_metrics(
     risk_free_rate: float,
     window: int = TRADING_DAYS_PER_YEAR,
 ) -> RollingMetrics:
-    """Rolling Sharpe + drawdown for portfolio and benchmark. Pure."""
+    """Pure — no I/O."""
     def sharpe(r: pd.Series) -> pd.Series:
         ann_mean = r.rolling(window).mean() * TRADING_DAYS_PER_YEAR
         ann_std  = r.rolling(window).std(ddof=1) * np.sqrt(TRADING_DAYS_PER_YEAR)
@@ -166,7 +164,7 @@ def compute_analysis(
 
 
 def print_results(result: AnalysisResult) -> None:
-    """Tearsheet to stdout. Pure: depends only on `result`."""
+    """Pure: depends only on `result`."""
     def fmt(val: float, fmt_str: str) -> str:
         return "n/a" if pd.isna(val) else fmt_str.format(val)
 

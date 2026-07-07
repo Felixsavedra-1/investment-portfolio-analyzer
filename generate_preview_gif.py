@@ -1,10 +1,6 @@
-"""
-generate_preview_gif.py — Capture an animated, scrolling GIF of the dashboard for README.md.
+"""Capture an animated scrolling GIF of the dashboard for the README.
 
-Guided tour: 3D allocation rings → scroll to the watchlist → click a company →
-land on the Claude-powered Deep Analysis panel (Thesis / Bull / Bear / Watch + chart).
-
-Usage:  python generate_preview_gif.py
+Tours the allocation rings, watchlist, and a company's deep-analysis panel.
 Output: docs/dashboard-preview.gif
 """
 
@@ -14,10 +10,10 @@ from pathlib import Path
 from PIL import Image
 from playwright.sync_api import FloatRect, ViewportSize, sync_playwright, Page
 
-from generate_preview import write_preview_html
+from generate_preview import SEED_COLORS_JS, write_preview_html
 
 DOCS_OUT = Path(__file__).parent / "docs" / "dashboard-preview.gif"
-VIEWPORT: ViewportSize = {"width": 1200, "height": 502}  # 2.39:1 cinemascope
+VIEWPORT: ViewportSize = {"width": 1200, "height": 502}  # 2.39:1
 INITIAL_WAIT_MS = 600   # Three.js CDN load + first render
 FRAME_INTERVAL_MS = 60  # ~16.7 fps
 PALETTE_COLORS = 180
@@ -114,6 +110,7 @@ def main() -> None:
     with sync_playwright() as pw:
         browser = pw.chromium.launch()
         page = browser.new_page(viewport=VIEWPORT)
+        page.add_init_script(SEED_COLORS_JS)
         page.goto(html_path.as_uri())
         page.wait_for_load_state("networkidle")  # ensure Three.js CDN script loads
         page.wait_for_timeout(INITIAL_WAIT_MS)

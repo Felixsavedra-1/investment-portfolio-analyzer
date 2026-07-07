@@ -65,7 +65,6 @@ class AnalysisResult:
 
 
 def compute_asset_metrics(returns: pd.Series, risk_free_rate: float) -> AssetMetrics:
-    """Pure — no I/O."""
     returns = returns.dropna()
     if returns.empty:
         raise ValueError("Insufficient return observations to compute metrics.")
@@ -95,7 +94,6 @@ def compute_rolling_metrics(
     risk_free_rate: float,
     window: int = TRADING_DAYS_PER_YEAR,
 ) -> RollingMetrics:
-    """Pure — no I/O."""
     def sharpe(r: pd.Series) -> pd.Series:
         ann_mean = r.rolling(window).mean() * TRADING_DAYS_PER_YEAR
         ann_std  = r.rolling(window).std(ddof=1) * np.sqrt(TRADING_DAYS_PER_YEAR)
@@ -164,7 +162,6 @@ def compute_analysis(
 
 
 def print_results(result: AnalysisResult) -> None:
-    """Pure: depends only on `result`."""
     def fmt(val: float, fmt_str: str) -> str:
         return "n/a" if pd.isna(val) else fmt_str.format(val)
 
@@ -324,7 +321,6 @@ def _plot_drawdown(ax: Axes, result: AnalysisResult) -> None:
 
 
 def plot_dashboard(result: AnalysisResult, output_path: Path) -> Path:
-    """Pure render — depends only on result and output_path."""
     sns.set_theme(style="whitegrid")
     fig, axes = plt.subplots(3, 2, figsize=(16, 18))
     fig.suptitle('Vero — Analysis Dashboard', fontsize=16, fontweight='bold')

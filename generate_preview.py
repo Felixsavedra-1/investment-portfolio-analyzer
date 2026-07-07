@@ -11,12 +11,25 @@ from dashboard import build_html
 
 DOCS_OUT = Path(__file__).parent / "docs" / "dashboard-preview.png"
 
+# Per-holding colors seeded into localStorage so the preview shows the color-picker
+# feature rather than the default palette.
+DEMO_COLORS = {
+    "color_h_NVDA":  "#324155",
+    "color_h_AAPL":  "#d8d0c8",
+    "color_h_AXP":   "#a03828",
+    "color_h_SWPPX": "#0f2d23",
+    "color_s_Car Fund":     "#8b4a3a",
+    "color_s_Housing Fund": "#3c2d46",
+}
+SEED_COLORS_JS = "".join(
+    f"localStorage.setItem({k!r}, {v!r});" for k, v in DEMO_COLORS.items()
+)
+
 random.seed(42)  # deterministic demo data for reproducible screenshots
 
 
 def _trend(start: float, end: float, n: int, vol: float = 0.022) -> list[float]:
-    """Geometric Brownian bridge: a Gaussian walk pinned to both endpoints, so the
-    path wanders like a real stock while hitting `start`/`end` exactly (returns stay correct)."""
+    """Brownian bridge from start to end — a random walk pinned to both endpoints."""
     if n < 2:
         return [round(start, 2)] * max(n, 1)
     incr = [random.gauss(0.0, vol) for _ in range(n - 1)]
@@ -171,6 +184,7 @@ if __name__ == "__main__":
     with sync_playwright() as p:
         browser = p.chromium.launch()
         page = browser.new_page(viewport={"width": 1400, "height": 800})
+        page.add_init_script(SEED_COLORS_JS)
         page.goto(out.as_uri())
         page.wait_for_timeout(1500)
         page.screenshot(path=str(DOCS_OUT), full_page=False)
